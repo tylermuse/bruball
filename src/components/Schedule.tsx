@@ -3,10 +3,8 @@ import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById } from '../data/teams';
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getCurrentPlayer } from '../lib/gameData';
 
 export function Schedule() {
-  const currentPlayer = getCurrentPlayer();
   const [phase, setPhase] = useState<SchedulePhase>('current');
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -147,9 +145,6 @@ export function Schedule() {
             <h3 className="text-sm font-medium text-gray-600 mb-2 px-1">{day}</h3>
             <div className="space-y-2">
               {games.map(game => {
-                const hasYourTeam =
-                  game.homeTeamOwner === currentPlayer.name ||
-                  game.awayTeamOwner === currentPlayer.name;
                 const awayTeam = getTeamById(game.awayTeamId);
                 const homeTeam = getTeamById(game.homeTeamId);
                 const winnerTeam = game.winnerTeamId ? getTeamById(game.winnerTeamId) : null;
@@ -163,11 +158,7 @@ export function Schedule() {
                 return (
                   <div
                     key={game.id}
-                    className={`rounded-lg p-4 shadow-sm ${
-                      hasYourTeam
-                        ? 'bg-fuchsia-50 border border-fuchsia-200'
-                        : 'bg-white border border-gray-200'
-                    }`}
+                    className="rounded-lg p-4 shadow-sm bg-white border border-gray-200"
                   >
                     {/* Game Time */}
                     <div className="text-xs text-gray-500 mb-3">{game.time}</div>
@@ -179,11 +170,7 @@ export function Schedule() {
                         <div className={`flex items-center gap-3 text-sm font-medium ${awayIsWinner ? 'text-fuchsia-700' : 'text-gray-900'}`}>
                           <span>{awayTeam.name}</span>
                           {game.awayTeamOwner && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              game.awayTeamOwner === 'You'
-                                ? 'bg-fuchsia-600 text-white'
-                                : 'bg-gray-200 text-gray-700'
-                            }`}>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
                               {game.awayTeamOwner}
                             </span>
                           )}
@@ -208,11 +195,7 @@ export function Schedule() {
                         <div className={`flex items-center gap-3 text-sm font-medium ${homeIsWinner ? 'text-fuchsia-700' : 'text-gray-900'}`}>
                           <span>{homeTeam.name}</span>
                           {game.homeTeamOwner && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              game.homeTeamOwner === 'You'
-                                ? 'bg-fuchsia-600 text-white'
-                                : 'bg-gray-200 text-gray-700'
-                            }`}>
+                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
                               {game.homeTeamOwner}
                             </span>
                           )}

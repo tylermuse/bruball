@@ -1,4 +1,4 @@
-import { getAllPlayers, getCurrentPlayer } from '../lib/gameData';
+import { getAllPlayers } from '../lib/gameData';
 import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById, type Team } from '../data/teams';
 import { resolveTeamRecord, useStandings } from '../lib/standings';
@@ -17,7 +17,6 @@ interface DraftPick {
 
 export function DraftResults() {
   const players = getAllPlayers();
-  const currentPlayer = getCurrentPlayer();
   const { standings } = useStandings();
   
   // Create draft order - alternating picks between players
@@ -59,7 +58,6 @@ export function DraftResults() {
       {/* Draft Picks List */}
       <div className="space-y-2">
         {draftPicks.map((pick) => {
-          const isYourPick = pick.playerName === currentPlayer.name;
           const teamInfo = getTeamById(pick.teamId);
           if (!teamInfo) return null;
           const record = resolveTeamRecord(
@@ -73,11 +71,7 @@ export function DraftResults() {
           return (
             <div
               key={pick.pickNumber}
-              className={`rounded-lg p-3 shadow-sm flex items-center gap-3 ${
-                isYourPick
-                  ? 'bg-fuchsia-50 border border-fuchsia-200'
-                  : 'bg-white border border-gray-200'
-              }`}
+              className="rounded-lg p-3 shadow-sm flex items-center gap-3 bg-white border border-gray-200"
             >
               {/* Pick Number */}
               <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 text-gray-700 font-semibold shrink-0">
@@ -98,13 +92,7 @@ export function DraftResults() {
                 <div className="text-xs text-gray-600">
                   {record.wins}-{record.losses}
                 </div>
-                <div
-                  className={`text-xs px-2 py-1 rounded-full ${
-                    isYourPick
-                      ? 'bg-fuchsia-600 text-white'
-                      : 'bg-gray-200 text-gray-700'
-                  }`}
-                >
+                <div className="text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-700">
                   {pick.playerName}
                 </div>
               </div>

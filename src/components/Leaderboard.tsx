@@ -1,11 +1,10 @@
-import { getAllPlayers, getCurrentPlayer } from '../lib/gameData';
+import { getAllPlayers } from '../lib/gameData';
 import { Medal, Crown } from 'lucide-react';
 import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById } from '../data/teams';
 import { getPlayerPoints, getTeamPoints, resolveTeamRecord, usePlayoffs, useStandings } from '../lib/standings';
 
 export function Leaderboard() {
-  const currentPlayer = getCurrentPlayer();
   const { standings } = useStandings();
   const { playoffs } = usePlayoffs();
   const players = getAllPlayers()
@@ -34,25 +33,18 @@ export function Leaderboard() {
       <div className="space-y-3">
         {players.map((player, index) => {
           const rank = index + 1;
-          const isCurrentUser = player.id === currentPlayer.id;
 
           return (
             <div
               key={player.id}
-              className={`rounded-lg p-4 transition-all shadow-sm ${
-                isCurrentUser
-                  ? 'bg-fuchsia-50 border border-fuchsia-200'
-                  : 'bg-white border border-gray-200'
-              }`}
+              className="rounded-lg p-4 transition-all shadow-sm bg-white border border-gray-200"
             >
               <div className="flex items-center gap-4 mb-3">
                 {/* Rank */}
                 <div className="flex items-center justify-center w-10 h-10 shrink-0">
                   {getMedalIcon(rank) || (
                     <div
-                      className={`text-xl ${
-                        isCurrentUser ? 'text-gray-900' : 'text-gray-600'
-                      }`}
+                      className="text-xl text-gray-600"
                     >
                       {rank}
                     </div>
@@ -61,15 +53,8 @@ export function Leaderboard() {
 
                 {/* Player Info */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <div className="font-medium text-gray-900">
-                      {player.name}
-                    </div>
-                    {isCurrentUser && (
-                      <span className="text-xs bg-fuchsia-600 text-white px-2 py-0.5 rounded-full">
-                        You
-                      </span>
-                    )}
+                  <div className="font-medium text-gray-900">
+                    {player.name}
                   </div>
                   <div className="text-sm mt-0.5 text-gray-600">
                     {player.teams.length} teams
@@ -86,7 +71,7 @@ export function Leaderboard() {
               </div>
 
               {/* Teams List */}
-              <div className={`pt-3 border-t ${isCurrentUser ? 'border-fuchsia-200' : 'border-gray-200'}`}>
+              <div className="pt-3 border-t border-gray-200">
                 <div className="space-y-2">
                   {[...player.teams].sort(
                     (a, b) =>
