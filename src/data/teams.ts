@@ -30,6 +30,7 @@ export const TEAMS: Team[] = [
     division: 'AFC East',
     primaryColor: '#00338D',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/buf.png',
   },
   {
     id: 'miami-dolphins',
@@ -39,6 +40,7 @@ export const TEAMS: Team[] = [
     division: 'AFC East',
     primaryColor: '#008E97',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/mia.png',
   },
   {
     id: 'new-england-patriots',
@@ -48,6 +50,7 @@ export const TEAMS: Team[] = [
     division: 'AFC East',
     primaryColor: '#002244',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/ne.png',
   },
   {
     id: 'new-york-jets',
@@ -57,6 +60,7 @@ export const TEAMS: Team[] = [
     division: 'AFC East',
     primaryColor: '#125740',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/nyj.png',
   },
   {
     id: 'baltimore-ravens',
@@ -66,6 +70,7 @@ export const TEAMS: Team[] = [
     division: 'AFC North',
     primaryColor: '#241773',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/bal.png',
   },
   {
     id: 'cincinnati-bengals',
@@ -75,6 +80,7 @@ export const TEAMS: Team[] = [
     division: 'AFC North',
     primaryColor: '#FB4F14',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/cin.png',
   },
   {
     id: 'cleveland-browns',
@@ -84,6 +90,7 @@ export const TEAMS: Team[] = [
     division: 'AFC North',
     primaryColor: '#311D00',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/cle.png',
   },
   {
     id: 'pittsburgh-steelers',
@@ -93,6 +100,7 @@ export const TEAMS: Team[] = [
     division: 'AFC North',
     primaryColor: '#FFB612',
     secondaryColor: '#000000',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/pit.png',
   },
   {
     id: 'houston-texans',
@@ -102,6 +110,7 @@ export const TEAMS: Team[] = [
     division: 'AFC South',
     primaryColor: '#03202F',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/hou.png',
   },
   {
     id: 'indianapolis-colts',
@@ -111,6 +120,7 @@ export const TEAMS: Team[] = [
     division: 'AFC South',
     primaryColor: '#002C5F',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/ind.png',
   },
   {
     id: 'jacksonville-jaguars',
@@ -120,6 +130,7 @@ export const TEAMS: Team[] = [
     division: 'AFC South',
     primaryColor: '#006778',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/jax.png',
   },
   {
     id: 'tennessee-titans',
@@ -129,6 +140,7 @@ export const TEAMS: Team[] = [
     division: 'AFC South',
     primaryColor: '#0C2340',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/ten.png',
   },
   {
     id: 'denver-broncos',
@@ -138,6 +150,7 @@ export const TEAMS: Team[] = [
     division: 'AFC West',
     primaryColor: '#FB4F14',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/den.png',
   },
   {
     id: 'kansas-city-chiefs',
@@ -147,6 +160,7 @@ export const TEAMS: Team[] = [
     division: 'AFC West',
     primaryColor: '#E31837',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/kc.png',
   },
   {
     id: 'las-vegas-raiders',
@@ -156,6 +170,7 @@ export const TEAMS: Team[] = [
     division: 'AFC West',
     primaryColor: '#000000',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/lv.png',
   },
   {
     id: 'los-angeles-chargers',
@@ -165,6 +180,7 @@ export const TEAMS: Team[] = [
     division: 'AFC West',
     primaryColor: '#0080C6',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/lac.png',
   },
   {
     id: 'dallas-cowboys',
@@ -174,6 +190,7 @@ export const TEAMS: Team[] = [
     division: 'NFC East',
     primaryColor: '#041E42',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/dal.png',
   },
   {
     id: 'new-york-giants',
@@ -183,6 +200,7 @@ export const TEAMS: Team[] = [
     division: 'NFC East',
     primaryColor: '#0B2265',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/nyg.png',
   },
   {
     id: 'philadelphia-eagles',
@@ -192,6 +210,7 @@ export const TEAMS: Team[] = [
     division: 'NFC East',
     primaryColor: '#004C54',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/phi.png',
   },
   {
     id: 'washington-commanders',
@@ -201,6 +220,7 @@ export const TEAMS: Team[] = [
     division: 'NFC East',
     primaryColor: '#5A1414',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/was.png',
   },
   {
     id: 'chicago-bears',
@@ -210,6 +230,7 @@ export const TEAMS: Team[] = [
     division: 'NFC North',
     primaryColor: '#0B162A',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/chi.png',
   },
   {
     id: 'detroit-lions',
@@ -219,6 +240,7 @@ export const TEAMS: Team[] = [
     division: 'NFC North',
     primaryColor: '#0076B6',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/det.png',
   },
   {
     id: 'green-bay-packers',
@@ -228,6 +250,7 @@ export const TEAMS: Team[] = [
     division: 'NFC North',
     primaryColor: '#203731',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/gb.png',
   },
   {
     id: 'minnesota-vikings',
@@ -237,6 +260,7 @@ export const TEAMS: Team[] = [
     division: 'NFC North',
     primaryColor: '#4F2683',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/min.png',
   },
   {
     id: 'atlanta-falcons',
@@ -246,6 +270,7 @@ export const TEAMS: Team[] = [
     division: 'NFC South',
     primaryColor: '#A71930',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/atl.png',
   },
   {
     id: 'carolina-panthers',
@@ -255,6 +280,7 @@ export const TEAMS: Team[] = [
     division: 'NFC South',
     primaryColor: '#0085CA',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/car.png',
   },
   {
     id: 'new-orleans-saints',
@@ -264,6 +290,7 @@ export const TEAMS: Team[] = [
     division: 'NFC South',
     primaryColor: '#D3BC8D',
     secondaryColor: '#000000',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/no.png',
   },
   {
     id: 'tampa-bay-buccaneers',
@@ -273,6 +300,7 @@ export const TEAMS: Team[] = [
     division: 'NFC South',
     primaryColor: '#D50A0A',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/tb.png',
   },
   {
     id: 'arizona-cardinals',
@@ -282,6 +310,7 @@ export const TEAMS: Team[] = [
     division: 'NFC West',
     primaryColor: '#97233F',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/ari.png',
   },
   {
     id: 'los-angeles-rams',
@@ -291,6 +320,7 @@ export const TEAMS: Team[] = [
     division: 'NFC West',
     primaryColor: '#003594',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/lar.png',
   },
   {
     id: 'san-francisco-49ers',
@@ -300,6 +330,7 @@ export const TEAMS: Team[] = [
     division: 'NFC West',
     primaryColor: '#AA0000',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/sf.png',
   },
   {
     id: 'seattle-seahawks',
@@ -309,6 +340,7 @@ export const TEAMS: Team[] = [
     division: 'NFC West',
     primaryColor: '#002244',
     secondaryColor: '#FFFFFF',
+    logoUrl: 'https://a.espncdn.com/i/teamlogos/nfl/500/sea.png',
   },
 ];
 

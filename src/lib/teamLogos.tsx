@@ -7,7 +7,9 @@ interface TeamLogoProps {
 }
 
 export function TeamLogo({ teamId, size = 'md' }: TeamLogoProps) {
-  const color = TEAM_BY_ID[teamId]?.primaryColor ?? '#6B7280';
+  const team = TEAM_BY_ID[teamId];
+  const color = team?.primaryColor ?? '#6B7280';
+  const logoUrl = team?.logoUrl ?? null;
   
   const sizeClasses = {
     sm: 'w-8 h-8',
@@ -23,10 +25,20 @@ export function TeamLogo({ teamId, size = 'md' }: TeamLogoProps) {
   
   return (
     <div
-      className={`${sizeClasses[size]} rounded-lg flex items-center justify-center shadow-sm`}
-      style={{ backgroundColor: color }}
+      className={`${sizeClasses[size]} rounded-lg flex items-center justify-center shadow-sm overflow-hidden ${
+        logoUrl ? 'bg-white border border-gray-200' : ''
+      }`}
+      style={logoUrl ? undefined : { backgroundColor: color }}
     >
-      <Shield className={`${iconSizes[size]} text-white`} />
+      {logoUrl ? (
+        <img
+          src={logoUrl}
+          alt={`${team?.name ?? 'Team'} logo`}
+          className={`${sizeClasses[size]} object-contain`}
+        />
+      ) : (
+        <Shield className={`${iconSizes[size]} text-white`} />
+      )}
     </div>
   );
 }
