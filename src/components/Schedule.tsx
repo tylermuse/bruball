@@ -89,12 +89,33 @@ export function Schedule() {
     'Wednesday',
   ];
   
+  const totalGames = schedule.length;
+  const yourGames = schedule.filter(
+    (game) =>
+      game.homeTeamOwner === currentPlayer.name ||
+      game.awayTeamOwner === currentPlayer.name,
+  ).length;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="bg-fuchsia-50 rounded-xl p-5 shadow-sm border border-fuchsia-200">
-        <div className="text-sm text-gray-600 mb-1">{weekLabel}</div>
-        <div className="text-2xl text-gray-900">NFL Games This Week</div>
+      <div className="bg-fuchsia-50 rounded-xl p-6 shadow-sm border border-fuchsia-200">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-sm text-gray-600 mb-1">{weekLabel}</div>
+            <div className="text-3xl font-bold text-gray-900">NFL Games This Week</div>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-gray-700">
+            <div className="rounded-lg bg-white px-3 py-2 border border-fuchsia-100">
+              <div className="text-xs text-gray-500">Total Games</div>
+              <div className="text-lg font-semibold text-gray-900">{totalGames}</div>
+            </div>
+            <div className="rounded-lg bg-white px-3 py-2 border border-fuchsia-100">
+              <div className="text-xs text-gray-500">Your Games</div>
+              <div className="text-lg font-semibold text-gray-900">{yourGames}</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Week Navigation */}
@@ -138,15 +159,26 @@ export function Schedule() {
       </div>
 
       {/* Games by Day */}
-      {dayOrder.map(day => {
+      {dayOrder.map((day) => {
         const games = gamesByDay[day];
         if (!games) return null;
         
+        const dayYourGames = games.filter(
+          (game) =>
+            game.homeTeamOwner === currentPlayer.name ||
+            game.awayTeamOwner === currentPlayer.name,
+        ).length;
+
         return (
-          <div key={day}>
-            <h3 className="text-sm font-medium text-gray-600 mb-2 px-1">{day}</h3>
+          <div key={day} className="space-y-3">
+            <div className="sticky top-2 z-10 bg-white/90 backdrop-blur border-b border-gray-200 py-2 px-1 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-700">{day}</h3>
+              <div className="text-xs text-gray-500">
+                {games.length} games{dayYourGames ? ` · ${dayYourGames} yours` : ''}
+              </div>
+            </div>
             <div className="space-y-2">
-              {games.map(game => {
+              {games.map((game) => {
                 const hasYourTeam =
                   game.homeTeamOwner === currentPlayer.name ||
                   game.awayTeamOwner === currentPlayer.name;
@@ -163,14 +195,21 @@ export function Schedule() {
                 return (
                   <div
                     key={game.id}
-                    className={`rounded-lg p-4 shadow-sm ${
+                    className={`rounded-lg p-5 shadow-sm transition-shadow hover:shadow-md ${
                       hasYourTeam
-                        ? 'bg-fuchsia-50 border border-fuchsia-200'
+                        ? 'bg-fuchsia-50 border-2 border-fuchsia-300'
                         : 'bg-white border border-gray-200'
                     }`}
                   >
                     {/* Game Time */}
-                    <div className="text-xs text-gray-500 mb-3">{game.time}</div>
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                      <span>{game.time}</span>
+                      {hasYourTeam && (
+                        <span className="rounded-full bg-fuchsia-600 text-white px-2 py-0.5 text-xs font-semibold">
+                          Your Game
+                        </span>
+                      )}
+                    </div>
                     
                     {/* Away Team */}
                     <div className="flex items-center gap-3 mb-2">
@@ -179,11 +218,13 @@ export function Schedule() {
                         <div className={`flex items-center gap-3 text-sm font-medium ${awayIsWinner ? 'text-fuchsia-700' : 'text-gray-900'}`}>
                           <span>{awayTeam.name}</span>
                           {game.awayTeamOwner && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              game.awayTeamOwner === 'You'
-                                ? 'bg-fuchsia-600 text-white'
-                                : 'bg-gray-200 text-gray-700'
-                            }`}>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full ${
+                                game.awayTeamOwner === currentPlayer.name
+                                  ? 'bg-fuchsia-600 text-white'
+                                  : 'bg-gray-200 text-gray-700'
+                              }`}
+                            >
                               {game.awayTeamOwner}
                             </span>
                           )}
@@ -208,11 +249,13 @@ export function Schedule() {
                         <div className={`flex items-center gap-3 text-sm font-medium ${homeIsWinner ? 'text-fuchsia-700' : 'text-gray-900'}`}>
                           <span>{homeTeam.name}</span>
                           {game.homeTeamOwner && (
-                            <span className={`text-xs px-2 py-0.5 rounded-full ${
-                              game.homeTeamOwner === 'You'
-                                ? 'bg-fuchsia-600 text-white'
-                                : 'bg-gray-200 text-gray-700'
-                            }`}>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full ${
+                                game.homeTeamOwner === currentPlayer.name
+                                  ? 'bg-fuchsia-600 text-white'
+                                  : 'bg-gray-200 text-gray-700'
+                              }`}
+                            >
                               {game.homeTeamOwner}
                             </span>
                           )}
