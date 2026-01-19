@@ -1,4 +1,4 @@
-import { getAllPlayers } from '../lib/gameData';
+import { getAllPlayers, getCurrentPlayer } from '../lib/gameData';
 import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById, type Team } from '../data/teams';
 import { resolveTeamRecord, useStandings } from '../lib/standings';
@@ -17,6 +17,7 @@ interface DraftPick {
 
 export function DraftResults() {
   const players = getAllPlayers();
+  const currentPlayer = getCurrentPlayer();
   const { standings } = useStandings();
   
   // Create draft order - alternating picks between players
@@ -58,7 +59,7 @@ export function DraftResults() {
       {/* Draft Picks List */}
       <div className="space-y-2">
         {draftPicks.map((pick) => {
-          const isYourPick = pick.playerName === 'You';
+          const isYourPick = pick.playerName === currentPlayer.name;
           const teamInfo = getTeamById(pick.teamId);
           if (!teamInfo) return null;
           const record = resolveTeamRecord(

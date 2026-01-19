@@ -1,10 +1,11 @@
-import { getAllPlayers } from '../lib/gameData';
+import { getAllPlayers, getCurrentPlayer } from '../lib/gameData';
 import { Medal, Crown } from 'lucide-react';
 import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById } from '../data/teams';
 import { getPlayerPoints, getTeamPoints, resolveTeamRecord, usePlayoffs, useStandings } from '../lib/standings';
 
 export function Leaderboard() {
+  const currentPlayer = getCurrentPlayer();
   const { standings } = useStandings();
   const { playoffs } = usePlayoffs();
   const players = getAllPlayers()
@@ -33,7 +34,7 @@ export function Leaderboard() {
       <div className="space-y-3">
         {players.map((player, index) => {
           const rank = index + 1;
-          const isCurrentUser = player.name === 'You';
+          const isCurrentUser = player.id === currentPlayer.id;
 
           return (
             <div

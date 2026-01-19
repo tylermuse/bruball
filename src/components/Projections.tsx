@@ -1,4 +1,4 @@
-import { getAllPlayers } from '../lib/gameData';
+import { getAllPlayers, getCurrentPlayer } from '../lib/gameData';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById } from '../data/teams';
@@ -6,7 +6,7 @@ import { getPlayerPoints, resolveTeamRecord, usePlayoffs, useStandings } from '.
 
 export function Projections() {
   const players = getAllPlayers();
-  const currentPlayer = players.find(p => p.name === 'You')!;
+  const currentPlayer = getCurrentPlayer();
   const { standings } = useStandings();
   const { playoffs } = usePlayoffs();
   const currentPoints = getPlayerPoints(currentPlayer, standings, playoffs);

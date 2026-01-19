@@ -3,8 +3,10 @@ import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById } from '../data/teams';
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { getCurrentPlayer } from '../lib/gameData';
 
 export function Schedule() {
+  const currentPlayer = getCurrentPlayer();
   const [phase, setPhase] = useState<SchedulePhase>('current');
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -145,7 +147,9 @@ export function Schedule() {
             <h3 className="text-sm font-medium text-gray-600 mb-2 px-1">{day}</h3>
             <div className="space-y-2">
               {games.map(game => {
-                const hasYourTeam = game.homeTeamOwner === 'You' || game.awayTeamOwner === 'You';
+                const hasYourTeam =
+                  game.homeTeamOwner === currentPlayer.name ||
+                  game.awayTeamOwner === currentPlayer.name;
                 const awayTeam = getTeamById(game.awayTeamId);
                 const homeTeam = getTeamById(game.homeTeamId);
                 const winnerTeam = game.winnerTeamId ? getTeamById(game.winnerTeamId) : null;
