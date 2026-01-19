@@ -14,6 +14,11 @@ export function Leaderboard() {
       livePoints: getPlayerPoints(player, standings, playoffs),
     }))
     .sort((a, b) => b.livePoints - a.livePoints);
+  const currentRank = players.findIndex((player) => player.id === currentPlayer.id) + 1;
+  const leaderPoints = players[0]?.livePoints ?? 0;
+  const currentPoints =
+    players.find((player) => player.id === currentPlayer.id)?.livePoints ?? 0;
+  const pointsBehind = Math.max(leaderPoints - currentPoints, 0);
 
   const getMedalIcon = (rank: number) => {
     if (rank === 1) return <Crown className="size-5 text-yellow-500" />;
@@ -23,11 +28,30 @@ export function Leaderboard() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="text-center mb-6">
-        <h2 className="text-xl text-gray-900 mb-2">Season Standings</h2>
-        <p className="text-fuchsia-600 text-sm">Ranked by total wins</p>
+      <div className="bg-fuchsia-50 rounded-xl p-6 shadow-sm border border-fuchsia-200">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="text-sm text-gray-600 mb-1">Season Standings</div>
+            <h2 className="text-3xl font-bold text-gray-900">Leaderboard</h2>
+            <p className="text-sm text-gray-600 mt-2">Ranked by total wins</p>
+          </div>
+          <div className="flex items-center gap-4 text-sm text-gray-700">
+            <div className="rounded-lg bg-white px-3 py-2 border border-fuchsia-100">
+              <div className="text-xs text-gray-500">Your Rank</div>
+              <div className="text-lg font-semibold text-gray-900">#{currentRank}</div>
+            </div>
+            <div className="rounded-lg bg-white px-3 py-2 border border-fuchsia-100">
+              <div className="text-xs text-gray-500">Your Points</div>
+              <div className="text-lg font-semibold text-gray-900">{currentPoints}</div>
+            </div>
+            <div className="rounded-lg bg-white px-3 py-2 border border-fuchsia-100">
+              <div className="text-xs text-gray-500">Points Behind</div>
+              <div className="text-lg font-semibold text-gray-900">{pointsBehind}</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Leaderboard */}
@@ -39,9 +63,9 @@ export function Leaderboard() {
           return (
             <div
               key={player.id}
-              className={`rounded-lg p-4 transition-all shadow-sm ${
+              className={`rounded-lg p-5 transition-all shadow-sm hover:shadow-md ${
                 isCurrentUser
-                  ? 'bg-fuchsia-50 border border-fuchsia-200'
+                  ? 'bg-fuchsia-50 border-2 border-fuchsia-300'
                   : 'bg-white border border-gray-200'
               }`}
             >
@@ -78,7 +102,7 @@ export function Leaderboard() {
 
                 {/* Points */}
                 <div className="text-right">
-                  <div className="text-2xl text-gray-900">{player.livePoints}</div>
+                  <div className="text-3xl font-bold text-gray-900">{player.livePoints}</div>
                   <div className="text-xs text-gray-500">
                     points
                   </div>

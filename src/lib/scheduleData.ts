@@ -12,6 +12,8 @@ export interface Game {
   pointsAtStake: number;
   completed?: boolean;
   winnerTeamId?: Team['id'];
+  homeScore?: number | null;
+  awayScore?: number | null;
 }
 
 interface ApiGame {
@@ -22,6 +24,8 @@ interface ApiGame {
   pointsAtStake: number;
   completed?: boolean;
   winnerName?: string | null;
+  homeScore?: number | null;
+  awayScore?: number | null;
 }
 
 interface ScheduleResponse {
@@ -38,7 +42,18 @@ export const weeklySchedule: Game[] = [
   
   // Sunday Early Games
   { id: '2', awayTeamId: 'miami-dolphins', homeTeamId: 'houston-texans', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
-  { id: '3', awayTeamId: 'cincinnati-bengals', homeTeamId: 'tennessee-titans', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
+  {
+    id: '3',
+    awayTeamId: 'cincinnati-bengals',
+    homeTeamId: 'tennessee-titans',
+    day: 'Sunday',
+    time: '1:00 PM',
+    pointsAtStake: 1,
+    completed: true,
+    winnerTeamId: 'cincinnati-bengals',
+    awayScore: 31,
+    homeScore: 17,
+  },
   { id: '4', awayTeamId: 'new-york-jets', homeTeamId: 'jacksonville-jaguars', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
   { id: '5', awayTeamId: 'washington-commanders', homeTeamId: 'new-orleans-saints', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
   { id: '6', awayTeamId: 'new-york-giants', homeTeamId: 'baltimore-ravens', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
@@ -109,6 +124,8 @@ function toScheduleGame(apiGame: ApiGame): Game | null {
     pointsAtStake: apiGame.pointsAtStake ?? 1,
     completed: Boolean(apiGame.completed),
     winnerTeamId: winner?.id,
+    homeScore: apiGame.homeScore ?? null,
+    awayScore: apiGame.awayScore ?? null,
   };
 }
 
