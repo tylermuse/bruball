@@ -3,9 +3,19 @@ import { Schedule } from './components/Schedule';
 import { Leaderboard } from './components/Leaderboard';
 import { DraftResults } from './components/DraftResults';
 import { Calendar, Trophy, CircleCheckBig } from 'lucide-react';
+import { useStandings } from './lib/standings';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'leaderboard' | 'draft'>('schedule');
+  const { updatedAt } = useStandings();
+  const updatedLabel = updatedAt
+    ? new Date(updatedAt).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      })
+    : null;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
@@ -13,6 +23,11 @@ export default function App() {
       <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10 shadow-sm">
         <h1 className="text-center text-gray-900">Bruball</h1>
         <p className="text-center text-gray-600 text-sm mt-1">2025 Season</p>
+        {updatedLabel && (
+          <p className="text-center text-gray-400 text-xs mt-1">
+            Updated {updatedLabel}
+          </p>
+        )}
       </div>
 
       {/* Tab Content */}
