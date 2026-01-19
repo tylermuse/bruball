@@ -944,3 +944,15 @@ html {
   inherits: false;
   initial-value: 0 0 #0000;
 }
+
+.bg-green-100 {
+  background-color: #dcfce7;
+}
+
+.bg-green-700 {
+  background-color: #15803d;
+}
+
+.border-green-300 {
+  border-color: #86efac;
+}
