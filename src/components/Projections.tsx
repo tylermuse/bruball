@@ -13,7 +13,7 @@ export function Projections() {
   
   // Sort by projected total
   const projectedStandings = [...players].sort((a, b) => b.projectedTotal - a.projectedTotal);
-  const projectedRank = projectedStandings.findIndex(p => p.name === 'You') + 1;
+  const projectedRank = projectedStandings.findIndex(p => p.id === currentPlayer.id) + 1;
   
   // Calculate remaining games and points
   const totalGamesPerTeam = 17;
@@ -80,16 +80,10 @@ export function Projections() {
               .findIndex(p => p.id === player.id) + 1;
             const projRank = index + 1;
             const rankChange = currentRank - projRank;
-            const isCurrentUser = player.name === 'You';
-
             return (
               <div
                 key={player.id}
-                className={`rounded-lg p-3 flex items-center gap-3 shadow-sm ${
-                  isCurrentUser
-                    ? 'bg-fuchsia-50 border border-fuchsia-200'
-                    : 'bg-white border border-gray-200'
-                }`}
+                className="rounded-lg p-3 flex items-center gap-3 shadow-sm bg-white border border-gray-200"
               >
                 {/* Projected Rank */}
                 <div className="w-8 text-center text-lg text-gray-900">{projRank}</div>
@@ -109,22 +103,15 @@ export function Projections() {
 
                 {/* Player Name */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-gray-900">
-                      {player.name}
-                    </span>
-                    {isCurrentUser && (
-                      <span className="text-xs bg-fuchsia-600 text-white px-2 py-0.5 rounded-full">
-                        You
-                      </span>
-                    )}
-                  </div>
+                  <span className="text-gray-900">
+                    {player.name}
+                  </span>
                 </div>
 
                 {/* Projected Points */}
                 <div className="text-right">
                   <div className="text-lg text-gray-900">{player.projectedTotal}</div>
-                  <div className={`text-xs ${isCurrentUser ? 'text-gray-600' : 'text-gray-500'}`}>
+                  <div className="text-xs text-gray-500">
                     projected
                   </div>
                 </div>

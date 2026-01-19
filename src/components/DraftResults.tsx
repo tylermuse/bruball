@@ -1,4 +1,4 @@
-import { getAllPlayers, getCurrentPlayer } from '../lib/gameData';
+import { getAllPlayers } from '../lib/gameData';
 import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById, type Team } from '../data/teams';
 import { resolveTeamRecord, useStandings } from '../lib/standings';
@@ -17,7 +17,6 @@ interface DraftPick {
 
 export function DraftResults() {
   const players = getAllPlayers();
-  const currentPlayer = getCurrentPlayer();
   const { standings } = useStandings();
   
   // Create draft order - alternating picks between players

@@ -3,10 +3,8 @@ import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById } from '../data/teams';
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { getCurrentPlayer } from '../lib/gameData';
 
 export function Schedule() {
-  const currentPlayer = getCurrentPlayer();
   const [phase, setPhase] = useState<SchedulePhase>('current');
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
