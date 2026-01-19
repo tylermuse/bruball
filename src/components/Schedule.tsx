@@ -170,7 +170,9 @@ export function Schedule() {
                         <div className={`flex items-center gap-3 text-sm font-medium ${awayIsWinner ? 'text-fuchsia-700' : 'text-gray-900'}`}>
                           <span>{awayTeam.name}</span>
                           {game.awayTeamOwner && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              awayIsWinner ? 'bg-green-700 text-white' : 'bg-gray-200 text-gray-700'
+                            }`}>
                               {game.awayTeamOwner}
                             </span>
                           )}
@@ -195,7 +197,9 @@ export function Schedule() {
                         <div className={`flex items-center gap-3 text-sm font-medium ${homeIsWinner ? 'text-fuchsia-700' : 'text-gray-900'}`}>
                           <span>{homeTeam.name}</span>
                           {game.homeTeamOwner && (
-                            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700">
+                            <span className={`text-xs px-2 py-0.5 rounded-full ${
+                              homeIsWinner ? 'bg-green-700 text-white' : 'bg-gray-200 text-gray-700'
+                            }`}>
                               {game.homeTeamOwner}
                             </span>
                           )}
@@ -209,16 +213,11 @@ export function Schedule() {
                     </div>
                     
                     {/* Points at Stake */}
-                    {game.pointsAtStake > 0 && (
+                    {game.pointsAtStake > 0 && !game.completed && (
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <div className="text-xs text-gray-600">
                           <span className="font-medium text-fuchsia-600">{game.pointsAtStake} points</span> at stake for the winner
                         </div>
-                        {game.completed && winnerTeam && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            Winner: <span className="font-medium text-gray-700">{winnerTeam.name}</span>
-                          </div>
-                        )}
                       </div>
                     )}
                   </div>
