@@ -1,10 +1,15 @@
 import { getAllPlayers } from '../lib/gameData';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { TeamLogo } from '../lib/teamLogos';
+import { getTeamById } from '../data/teams';
+import { getPlayerPoints, resolveTeamRecord, usePlayoffs, useStandings } from '../lib/standings';
 
 export function Projections() {
   const players = getAllPlayers();
   const currentPlayer = players.find(p => p.name === 'You')!;
+  const { standings } = useStandings();
+  const { playoffs } = usePlayoffs();
+  const currentPoints = getPlayerPoints(currentPlayer, standings, playoffs);
   
   // Sort by projected total
   const projectedStandings = [...players].sort((a, b) => b.projectedTotal - a.projectedTotal);
@@ -12,9 +17,9 @@ export function Projections() {
   
   // Calculate remaining games and points
   const totalGamesPerTeam = 17;
-  const gamesPlayed = currentPlayer.teams[0].gamesPlayed;
+  const gamesPlayed = resolveTeamRecord(currentPlayer.teams[0], standings).gamesPlayed;
   const gamesRemaining = totalGamesPerTeam - gamesPlayed;
-  const pointsRemaining = currentPlayer.projectedTotal - currentPlayer.totalPoints;
+  const pointsRemaining = currentPlayer.projectedTotal - currentPoints;
 
   return (
     <div className="space-y-4">
@@ -28,7 +33,7 @@ export function Projections() {
         
         <div className="grid grid-cols-2 gap-4 pt-4 border-t border-fuchsia-200">
           <div>
-            <div className="text-2xl text-gray-900">{currentPlayer.totalPoints}</div>
+            <div className="text-2xl text-gray-900">{currentPoints}</div>
             <div className="text-sm text-gray-600">Current Points</div>
           </div>
           <div>
@@ -67,7 +72,11 @@ export function Projections() {
         <div className="space-y-2">
           {projectedStandings.map((player, index) => {
             const currentRank = players
-              .sort((a, b) => b.totalPoints - a.totalPoints)
+              .map((p) => ({
+                ...p,
+                livePoints: getPlayerPoints(p, standings, playoffs),
+              }))
+              .sort((a, b) => b.livePoints - a.livePoints)
               .findIndex(p => p.id === player.id) + 1;
             const projRank = index + 1;
             const rankChange = currentRank - projRank;
@@ -130,14 +139,22 @@ export function Projections() {
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 shadow-sm">
           <div className="text-xs text-green-700 mb-2">Best Team</div>
           {(() => {
-            const bestTeam = [...currentPlayer.teams].sort((a, b) => b.wins - a.wins)[0];
+            const bestTeam = [...currentPlayer.teams].sort(
+              (a, b) =>
+                resolveTeamRecord(b, standings).wins -
+                resolveTeamRecord(a, standings).wins,
+            )[0];
+            const bestTeamInfo = getTeamById(bestTeam.teamId);
+            if (!bestTeamInfo) return null;
+            const bestRecord = resolveTeamRecord(bestTeam, standings);
+
             return (
               <>
                 <div className="flex items-center gap-2 mb-2">
-                  <TeamLogo teamName={bestTeam.name} size="sm" />
+                  <TeamLogo teamId={bestTeam.teamId} size="sm" />
                 </div>
-                <div className="text-sm font-medium text-gray-900">{bestTeam.name}</div>
-                <div className="text-lg text-green-600 mt-1">{bestTeam.wins} wins</div>
+                <div className="text-sm font-medium text-gray-900">{bestTeamInfo.name}</div>
+                <div className="text-lg text-green-600 mt-1">{bestRecord.wins} wins</div>
               </>
             );
           })()}
@@ -146,14 +163,22 @@ export function Projections() {
         <div className="bg-red-50 border border-red-200 rounded-lg p-3 shadow-sm">
           <div className="text-xs text-red-700 mb-2">Needs Help</div>
           {(() => {
-            const worstTeam = [...currentPlayer.teams].sort((a, b) => a.wins - b.wins)[0];
+            const worstTeam = [...currentPlayer.teams].sort(
+              (a, b) =>
+                resolveTeamRecord(a, standings).wins -
+                resolveTeamRecord(b, standings).wins,
+            )[0];
+            const worstTeamInfo = getTeamById(worstTeam.teamId);
+            if (!worstTeamInfo) return null;
+            const worstRecord = resolveTeamRecord(worstTeam, standings);
+
             return (
               <>
                 <div className="flex items-center gap-2 mb-2">
-                  <TeamLogo teamName={worstTeam.name} size="sm" />
+                  <TeamLogo teamId={worstTeam.teamId} size="sm" />
                 </div>
-                <div className="text-sm font-medium text-gray-900">{worstTeam.name}</div>
-                <div className="text-lg text-red-600 mt-1">{worstTeam.wins} wins</div>
+                <div className="text-sm font-medium text-gray-900">{worstTeamInfo.name}</div>
+                <div className="text-lg text-red-600 mt-1">{worstRecord.wins} wins</div>
               </>
             );
           })()}

@@ -11,8 +11,8 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10 shadow-sm">
-        <h1 className="text-center text-gray-900">NFL Division Game</h1>
-        <p className="text-center text-gray-600 text-sm mt-1">2024 Season Tracker</p>
+        <h1 className="text-center text-gray-900">Bruball</h1>
+        <p className="text-center text-gray-600 text-sm mt-1">2025 Season</p>
       </div>
 
       {/* Tab Content */}

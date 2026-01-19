@@ -1,0 +1,197 @@
+import { useEffect, useState } from 'react';
+import { getTeamById, type Team } from '../data/teams';
+import type { Player, TeamRecord } from './gameData';
+
+export interface TeamStanding {
+  wins: number;
+  losses: number;
+  ties: number;
+  abbreviation?: string;
+  division?: string;
+  conference?: string;
+  seed?: number;
+}
+
+export type StandingsMap = Record<string, TeamStanding>;
+
+interface StandingsResponse {
+  season: number;
+  updatedAt: string;
+  teams: StandingsMap;
+}
+
+const REFRESH_MS = 10 * 60 * 1000;
+
+export function useStandings() {
+  const [standings, setStandings] = useState<StandingsMap | null>(null);
+  const [season, setSeason] = useState<number | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const response = await fetch('/api/standings');
+        if (!response.ok) {
+          throw new Error(`Standings request failed (${response.status})`);
+        }
+
+        const data = (await response.json()) as StandingsResponse;
+        if (!active) return;
+
+        setStandings(data.teams ?? {});
+        setSeason(data.season ?? null);
+        setUpdatedAt(data.updatedAt ?? null);
+        setError(null);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : 'Failed to load standings');
+      }
+    };
+
+    load();
+    const id = setInterval(load, REFRESH_MS);
+
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  return { standings, season, updatedAt, error };
+}
+
+export interface PlayoffWins {
+  wildCard: number;
+  divisional: number;
+  conference: number;
+  superBowl: number;
+}
+
+export interface PlayoffResponse {
+  season: number | null;
+  updatedAt: string | null;
+  playoffWins: Record<string, PlayoffWins>;
+  wildcardByes: Record<string, boolean>;
+}
+
+export function usePlayoffs() {
+  const [playoffs, setPlayoffs] = useState<PlayoffResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const response = await fetch('/api/playoffs');
+        if (!response.ok) {
+          throw new Error(`Playoffs request failed (${response.status})`);
+        }
+
+        const data = (await response.json()) as PlayoffResponse;
+        if (!active) return;
+        setPlayoffs(data);
+        setError(null);
+      } catch (err) {
+        if (!active) return;
+        setError(err instanceof Error ? err.message : 'Failed to load playoffs');
+      }
+    };
+
+    load();
+    const id = setInterval(load, REFRESH_MS);
+
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  return { playoffs, error };
+}
+
+export function getStandingForTeam(
+  teamId: Team['id'],
+  standings: StandingsMap | null,
+) {
+  if (!standings) return null;
+  const teamInfo = getTeamById(teamId);
+  if (!teamInfo) return null;
+  return standings[teamInfo.name] ?? null;
+}
+
+export function resolveTeamRecord(
+  team: TeamRecord,
+  standings: StandingsMap | null,
+) {
+  const standing = getStandingForTeam(team.teamId, standings);
+  const wins = standing?.wins ?? team.wins;
+  const losses = standing?.losses ?? team.losses;
+  const ties = standing?.ties ?? 0;
+  const gamesPlayed = wins + losses + ties;
+
+  return { wins, losses, ties, gamesPlayed };
+}
+
+const PLAYOFF_POINTS = {
+  wildCardWin: 1.5,
+  divisionalWin: 2.5,
+  conferenceWin: 3.5,
+  superBowlWin: 5,
+  wildCardBye: 1.5,
+};
+
+export function getTeamPlayoffPoints(
+  teamId: Team['id'],
+  playoffs: PlayoffResponse | null,
+) {
+  if (!playoffs) return 0;
+  const teamInfo = getTeamById(teamId);
+  if (!teamInfo) return 0;
+  const playoffWins = playoffs.playoffWins?.[teamInfo.name];
+  const wildcardBye = playoffs.wildcardByes?.[teamInfo.name];
+
+  return (
+    (playoffWins?.wildCard ?? 0) * PLAYOFF_POINTS.wildCardWin +
+    (playoffWins?.divisional ?? 0) * PLAYOFF_POINTS.divisionalWin +
+    (playoffWins?.conference ?? 0) * PLAYOFF_POINTS.conferenceWin +
+    (playoffWins?.superBowl ?? 0) * PLAYOFF_POINTS.superBowlWin +
+    (wildcardBye ? PLAYOFF_POINTS.wildCardBye : 0)
+  );
+}
+
+export function getTeamPoints(
+  teamId: Team['id'],
+  standings: StandingsMap | null,
+  playoffs: PlayoffResponse | null,
+) {
+  const standing = getStandingForTeam(teamId, standings);
+  const regularWins = standing?.wins ?? 0;
+  return regularWins + getTeamPlayoffPoints(teamId, playoffs);
+}
+
+export function getPlayerPoints(
+  player: Player,
+  standings: StandingsMap | null,
+  playoffs: PlayoffResponse | null,
+) {
+  if (!standings && !playoffs) return player.totalPoints;
+
+  const regularSeasonPoints = standings
+    ? player.teams.reduce(
+        (sum, team) => sum + resolveTeamRecord(team, standings).wins,
+        0,
+      )
+    : player.totalPoints;
+
+  if (!playoffs) return regularSeasonPoints;
+
+  const playoffPoints = player.teams.reduce((sum, team) => {
+    return sum + getTeamPlayoffPoints(team.teamId, playoffs);
+  }, 0);
+
+  return regularSeasonPoints + playoffPoints;
+}

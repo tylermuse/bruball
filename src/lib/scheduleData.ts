@@ -1,49 +1,72 @@
+import { useEffect, useState } from 'react';
 import { getAllPlayers } from './gameData';
+import { getTeamByName } from '../data/teams';
+import type { Team } from '../data/teams';
 
 export interface Game {
   id: string;
-  homeTeam: string;
-  awayTeam: string;
+  homeTeamId: Team['id'];
+  awayTeamId: Team['id'];
   time: string;
   day: string;
+  pointsAtStake: number;
+  completed?: boolean;
+  winnerTeamId?: Team['id'];
+}
+
+interface ApiGame {
+  id: string;
+  date: string;
+  homeTeamName: string;
+  awayTeamName: string;
+  pointsAtStake: number;
+  completed?: boolean;
+  winnerName?: string | null;
+}
+
+interface ScheduleResponse {
+  week: number | null;
+  weekLabel: string | null;
+  seasonType?: number | null;
+  games: ApiGame[];
 }
 
 // Week 15 NFL Schedule
 export const weeklySchedule: Game[] = [
   // Thursday Night
-  { id: '1', awayTeam: 'Los Angeles Rams', homeTeam: 'San Francisco 49ers', day: 'Thursday', time: '8:15 PM' },
+  { id: '1', awayTeamId: 'los-angeles-rams', homeTeamId: 'san-francisco-49ers', day: 'Thursday', time: '8:15 PM', pointsAtStake: 1 },
   
   // Sunday Early Games
-  { id: '2', awayTeam: 'Miami Dolphins', homeTeam: 'Houston Texans', day: 'Sunday', time: '1:00 PM' },
-  { id: '3', awayTeam: 'Cincinnati Bengals', homeTeam: 'Tennessee Titans', day: 'Sunday', time: '1:00 PM' },
-  { id: '4', awayTeam: 'New York Jets', homeTeam: 'Jacksonville Jaguars', day: 'Sunday', time: '1:00 PM' },
-  { id: '5', awayTeam: 'Washington Commanders', homeTeam: 'New Orleans Saints', day: 'Sunday', time: '1:00 PM' },
-  { id: '6', awayTeam: 'New York Giants', homeTeam: 'Baltimore Ravens', day: 'Sunday', time: '1:00 PM' },
-  { id: '7', awayTeam: 'Dallas Cowboys', homeTeam: 'Carolina Panthers', day: 'Sunday', time: '1:00 PM' },
+  { id: '2', awayTeamId: 'miami-dolphins', homeTeamId: 'houston-texans', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
+  { id: '3', awayTeamId: 'cincinnati-bengals', homeTeamId: 'tennessee-titans', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
+  { id: '4', awayTeamId: 'new-york-jets', homeTeamId: 'jacksonville-jaguars', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
+  { id: '5', awayTeamId: 'washington-commanders', homeTeamId: 'new-orleans-saints', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
+  { id: '6', awayTeamId: 'new-york-giants', homeTeamId: 'baltimore-ravens', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
+  { id: '7', awayTeamId: 'dallas-cowboys', homeTeamId: 'carolina-panthers', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
   
   // Sunday Afternoon Games
-  { id: '8', awayTeam: 'Indianapolis Colts', homeTeam: 'Denver Broncos', day: 'Sunday', time: '4:05 PM' },
-  { id: '9', awayTeam: 'New England Patriots', homeTeam: 'Arizona Cardinals', day: 'Sunday', time: '4:25 PM' },
-  { id: '10', awayTeam: 'Los Angeles Chargers', homeTeam: 'Tampa Bay Buccaneers', day: 'Sunday', time: '4:25 PM' },
+  { id: '8', awayTeamId: 'indianapolis-colts', homeTeamId: 'denver-broncos', day: 'Sunday', time: '4:05 PM', pointsAtStake: 1 },
+  { id: '9', awayTeamId: 'new-england-patriots', homeTeamId: 'arizona-cardinals', day: 'Sunday', time: '4:25 PM', pointsAtStake: 1 },
+  { id: '10', awayTeamId: 'los-angeles-chargers', homeTeamId: 'tampa-bay-buccaneers', day: 'Sunday', time: '4:25 PM', pointsAtStake: 1 },
   
   // Sunday Night
-  { id: '11', awayTeam: 'Detroit Lions', homeTeam: 'Buffalo Bills', day: 'Sunday', time: '8:20 PM' },
+  { id: '11', awayTeamId: 'detroit-lions', homeTeamId: 'buffalo-bills', day: 'Sunday', time: '8:20 PM', pointsAtStake: 1 },
   
   // Monday Night
-  { id: '12', awayTeam: 'Atlanta Falcons', homeTeam: 'Las Vegas Raiders', day: 'Monday', time: '8:30 PM' },
-  { id: '13', awayTeam: 'Green Bay Packers', homeTeam: 'Seattle Seahawks', day: 'Monday', time: '8:40 PM' },
+  { id: '12', awayTeamId: 'atlanta-falcons', homeTeamId: 'las-vegas-raiders', day: 'Monday', time: '8:30 PM', pointsAtStake: 1 },
+  { id: '13', awayTeamId: 'green-bay-packers', homeTeamId: 'seattle-seahawks', day: 'Monday', time: '8:40 PM', pointsAtStake: 1 },
   
   // Other games
-  { id: '14', awayTeam: 'Cleveland Browns', homeTeam: 'Kansas City Chiefs', day: 'Sunday', time: '1:00 PM' },
-  { id: '15', awayTeam: 'Pittsburgh Steelers', homeTeam: 'Philadelphia Eagles', day: 'Sunday', time: '4:25 PM' },
-  { id: '16', awayTeam: 'Chicago Bears', homeTeam: 'Minnesota Vikings', day: 'Monday', time: '8:00 PM' },
+  { id: '14', awayTeamId: 'cleveland-browns', homeTeamId: 'kansas-city-chiefs', day: 'Sunday', time: '1:00 PM', pointsAtStake: 1 },
+  { id: '15', awayTeamId: 'pittsburgh-steelers', homeTeamId: 'philadelphia-eagles', day: 'Sunday', time: '4:25 PM', pointsAtStake: 1 },
+  { id: '16', awayTeamId: 'chicago-bears', homeTeamId: 'minnesota-vikings', day: 'Monday', time: '8:00 PM', pointsAtStake: 1 },
 ];
 
-export function getTeamOwner(teamName: string): string | null {
+export function getTeamOwner(teamId: Team['id']): string | null {
   const players = getAllPlayers();
   
   for (const player of players) {
-    const hasTeam = player.teams.some(team => team.name === teamName);
+    const hasTeam = player.teams.some(team => team.teamId === teamId);
     if (hasTeam) {
       return player.name;
     }
@@ -58,12 +81,44 @@ export interface GameWithOwners extends Game {
   pointsAtStake: number;
 }
 
-export function getScheduleWithOwners(): GameWithOwners[] {
-  return weeklySchedule.map(game => {
-    const homeTeamOwner = getTeamOwner(game.homeTeam);
-    const awayTeamOwner = getTeamOwner(game.awayTeam);
-    const pointsAtStake = (homeTeamOwner || awayTeamOwner) ? 1 : 0;
-    
+function formatDayTime(dateString: string) {
+  const date = new Date(dateString);
+  const day = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const time = date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
+
+  return { day, time };
+}
+
+function toScheduleGame(apiGame: ApiGame): Game | null {
+  const homeTeam = getTeamByName(apiGame.homeTeamName);
+  const awayTeam = getTeamByName(apiGame.awayTeamName);
+  if (!homeTeam || !awayTeam) return null;
+  const winner = apiGame.winnerName ? getTeamByName(apiGame.winnerName) : undefined;
+
+  const { day, time } = formatDayTime(apiGame.date);
+
+  return {
+    id: apiGame.id,
+    homeTeamId: homeTeam.id,
+    awayTeamId: awayTeam.id,
+    day,
+    time,
+    pointsAtStake: apiGame.pointsAtStake ?? 1,
+    completed: Boolean(apiGame.completed),
+    winnerTeamId: winner?.id,
+  };
+}
+
+export function getScheduleWithOwners(schedule: Game[]): GameWithOwners[] {
+  return schedule.map((game) => {
+    const homeTeamOwner = getTeamOwner(game.homeTeamId);
+    const awayTeamOwner = getTeamOwner(game.awayTeamId);
+    const hasOwner = Boolean(homeTeamOwner || awayTeamOwner);
+    const pointsAtStake = hasOwner ? (game.pointsAtStake ?? 1) : 0;
+
     return {
       ...game,
       homeTeamOwner,
@@ -71,4 +126,54 @@ export function getScheduleWithOwners(): GameWithOwners[] {
       pointsAtStake,
     };
   });
+}
+
+export type SchedulePhase = 'current' | 'regular' | 'postseason';
+
+export function useWeeklySchedule(phase: SchedulePhase, week: number | null) {
+  const [games, setGames] = useState<Game[]>(weeklySchedule);
+  const [weekLabel, setWeekLabel] = useState<string | null>('Week 15 Schedule');
+  const [currentWeek, setCurrentWeek] = useState<number | null>(null);
+  const [currentSeasonType, setCurrentSeasonType] = useState<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    const load = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (phase && phase !== 'current') {
+          params.set('phase', phase);
+        }
+        if (week) {
+          params.set('week', String(week));
+        }
+        const url = params.toString() ? `/api/schedule?${params.toString()}` : '/api/schedule';
+        const response = await fetch(url);
+        if (!response.ok) return;
+        const data = (await response.json()) as ScheduleResponse;
+        if (!active) return;
+
+        const mappedGames = data.games
+          .map(toScheduleGame)
+          .filter((game): game is Game => Boolean(game));
+
+        const label =
+          data.weekLabel ?? (data.week ? `Week ${data.week}` : 'This Week');
+        setWeekLabel(label);
+        setCurrentWeek(data.week ?? null);
+        setCurrentSeasonType(data.seasonType ?? null);
+        setGames(mappedGames);
+      } catch {
+        // Keep fallback schedule on error.
+      }
+    };
+
+    load();
+    return () => {
+      active = false;
+    };
+  }, [phase, week]);
+
+  return { games, weekLabel, currentWeek, currentSeasonType };
 }

@@ -1,9 +1,18 @@
 import { getAllPlayers } from '../lib/gameData';
 import { Medal, Crown } from 'lucide-react';
 import { TeamLogo } from '../lib/teamLogos';
+import { getTeamById } from '../data/teams';
+import { getPlayerPoints, getTeamPoints, resolveTeamRecord, usePlayoffs, useStandings } from '../lib/standings';
 
 export function Leaderboard() {
-  const players = getAllPlayers().sort((a, b) => b.totalPoints - a.totalPoints);
+  const { standings } = useStandings();
+  const { playoffs } = usePlayoffs();
+  const players = getAllPlayers()
+    .map((player) => ({
+      ...player,
+      livePoints: getPlayerPoints(player, standings, playoffs),
+    }))
+    .sort((a, b) => b.livePoints - a.livePoints);
 
   const getMedalIcon = (rank: number) => {
     if (rank === 1) return <Crown className="size-5 text-yellow-500" />;
@@ -68,7 +77,7 @@ export function Leaderboard() {
 
                 {/* Points */}
                 <div className="text-right">
-                  <div className="text-2xl text-gray-900">{player.totalPoints}</div>
+                  <div className="text-2xl text-gray-900">{player.livePoints}</div>
                   <div className="text-xs text-gray-500">
                     points
                   </div>
@@ -78,18 +87,29 @@ export function Leaderboard() {
               {/* Teams List */}
               <div className={`pt-3 border-t ${isCurrentUser ? 'border-fuchsia-200' : 'border-gray-200'}`}>
                 <div className="space-y-2">
-                  {[...player.teams].sort((a, b) => b.wins - a.wins).map((team) => (
-                    <div
-                      key={team.name}
-                      className="flex items-center gap-2 text-sm text-gray-700"
-                    >
-                      <TeamLogo teamName={team.name} size="sm" />
-                      <span className="truncate flex-1">{team.name}</span>
-                      <span className="font-medium shrink-0 text-gray-900">
-                        {team.wins}
-                      </span>
-                    </div>
-                  ))}
+                  {[...player.teams].sort(
+                    (a, b) =>
+                      resolveTeamRecord(b, standings).wins -
+                      resolveTeamRecord(a, standings).wins,
+                  ).map((team) => {
+                    const teamInfo = getTeamById(team.teamId);
+                    const record = resolveTeamRecord(team, standings);
+                    const teamPoints = getTeamPoints(team.teamId, standings, playoffs);
+                    if (!teamInfo) return null;
+
+                    return (
+                      <div
+                        key={team.teamId}
+                        className="flex items-center gap-2 text-sm text-gray-700"
+                      >
+                        <TeamLogo teamId={team.teamId} size="sm" />
+                        <span className="truncate flex-1">{teamInfo.name}</span>
+                        <span className="font-medium shrink-0 text-gray-900">
+                          {teamPoints}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

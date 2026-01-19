@@ -1,16 +1,23 @@
 import { getAllPlayers } from '../lib/gameData';
 import { TeamLogo } from '../lib/teamLogos';
+import { getTeamById, type Team } from '../data/teams';
+import { resolveTeamRecord, useStandings } from '../lib/standings';
 
 interface DraftPick {
   pickNumber: number;
   playerName: string;
-  teamName: string;
-  division: string;
-  currentRecord: string;
+  teamId: Team['id'];
+  fallbackRecord: {
+    wins: number;
+    losses: number;
+    gamesPlayed: number;
+    projectedWins: number;
+  };
 }
 
 export function DraftResults() {
   const players = getAllPlayers();
+  const { standings } = useStandings();
   
   // Create draft order - alternating picks between players
   const draftPicks: DraftPick[] = [];
@@ -27,9 +34,13 @@ export function DraftResults() {
         draftPicks.push({
           pickNumber: draftPicks.length + 1,
           playerName: player.name,
-          teamName: team.name,
-          division: team.division,
-          currentRecord: `${team.wins}-${team.losses}`,
+          teamId: team.teamId,
+          fallbackRecord: {
+            wins: team.wins,
+            losses: team.losses,
+            gamesPlayed: team.gamesPlayed,
+            projectedWins: team.projectedWins,
+          },
         });
       }
     });
@@ -48,6 +59,15 @@ export function DraftResults() {
       <div className="space-y-2">
         {draftPicks.map((pick) => {
           const isYourPick = pick.playerName === 'You';
+          const teamInfo = getTeamById(pick.teamId);
+          if (!teamInfo) return null;
+          const record = resolveTeamRecord(
+            {
+              teamId: pick.teamId,
+              ...pick.fallbackRecord,
+            },
+            standings,
+          );
           
           return (
             <div
@@ -64,17 +84,19 @@ export function DraftResults() {
               </div>
 
               {/* Team Logo */}
-              <TeamLogo teamName={pick.teamName} size="sm" />
+              <TeamLogo teamId={pick.teamId} size="sm" />
 
               {/* Team Info */}
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900">{pick.teamName}</div>
-                <div className="text-xs text-gray-500">{pick.division}</div>
+                <div className="text-sm font-medium text-gray-900">{teamInfo.name}</div>
+                <div className="text-xs text-gray-500">{teamInfo.division}</div>
               </div>
 
               {/* Player Badge */}
               <div className="flex items-center gap-2 shrink-0">
-                <div className="text-xs text-gray-600">{pick.currentRecord}</div>
+                <div className="text-xs text-gray-600">
+                  {record.wins}-{record.losses}
+                </div>
                 <div
                   className={`text-xs px-2 py-1 rounded-full ${
                     isYourPick
