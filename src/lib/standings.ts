@@ -20,7 +20,16 @@ interface StandingsResponse {
   teams: StandingsMap;
 }
 
-const REFRESH_MS = 10 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function getNext7amUtcDelayMs() {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 7, 0, 0, 0));
+  if (next <= now) {
+    next.setUTCDate(next.getUTCDate() + 1);
+  }
+  return next.getTime() - now.getTime();
+}
 
 export function useStandings() {
   const [standings, setStandings] = useState<StandingsMap | null>(null);
@@ -52,11 +61,21 @@ export function useStandings() {
     };
 
     load();
-    const id = setInterval(load, REFRESH_MS);
+    const cleanupHandles: number[] = [];
+    const timeoutId = setTimeout(() => {
+      if (!active) return;
+      load();
+      const intervalId = setInterval(load, DAY_MS);
+      cleanupHandles.push(intervalId);
+    }, getNext7amUtcDelayMs());
+    cleanupHandles.push(timeoutId);
 
     return () => {
       active = false;
-      clearInterval(id);
+      cleanupHandles.forEach((handle) => {
+        clearTimeout(handle);
+        clearInterval(handle);
+      });
     };
   }, []);
 
@@ -102,11 +121,21 @@ export function usePlayoffs() {
     };
 
     load();
-    const id = setInterval(load, REFRESH_MS);
+    const cleanupHandles: number[] = [];
+    const timeoutId = setTimeout(() => {
+      if (!active) return;
+      load();
+      const intervalId = setInterval(load, DAY_MS);
+      cleanupHandles.push(intervalId);
+    }, getNext7amUtcDelayMs());
+    cleanupHandles.push(timeoutId);
 
     return () => {
       active = false;
-      clearInterval(id);
+      cleanupHandles.forEach((handle) => {
+        clearTimeout(handle);
+        clearInterval(handle);
+      });
     };
   }, []);
 

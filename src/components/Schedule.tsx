@@ -15,7 +15,7 @@ export function Schedule() {
   const schedule = getScheduleWithOwners(games);
 
   const options = useMemo(() => {
-    const weeks = Array.from({ length: 17 }, (_, index) => ({
+    const weeks = Array.from({ length: 18 }, (_, index) => ({
       id: `week-${index + 1}`,
       label: `Week ${index + 1}`,
       phase: 'regular' as const,
