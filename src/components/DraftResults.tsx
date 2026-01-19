@@ -1,58 +1,27 @@
-import { getAllPlayers } from '../lib/gameData';
+import { draftPicks, getAllPlayers } from '../lib/gameData';
 import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById, type Team } from '../data/teams';
 import { resolveTeamRecord, useStandings } from '../lib/standings';
 
-interface DraftPick {
-  pickNumber: number;
-  playerName: string;
-  teamId: Team['id'];
-  fallbackRecord: {
-    wins: number;
-    losses: number;
-    gamesPlayed: number;
-    projectedWins: number;
-  };
-}
-
 export function DraftResults() {
   const players = getAllPlayers();
+  const playerById = new Map(players.map((player) => [player.id, player]));
   const { standings } = useStandings();
-  
-  // Create draft order - alternating picks between players
-  const draftPicks: DraftPick[] = [];
-  
-  // Simulate a snake draft order
-  const rounds = 8; // 8 teams per player
-  for (let round = 0; round < rounds; round++) {
-    const isEvenRound = round % 2 === 0;
-    const playerOrder = isEvenRound ? players : [...players].reverse();
-    
-    playerOrder.forEach((player) => {
-      const team = player.teams[round];
-      if (team) {
-        draftPicks.push({
-          pickNumber: draftPicks.length + 1,
-          playerName: player.name,
-          teamId: team.teamId,
-          fallbackRecord: {
-            wins: team.wins,
-            losses: team.losses,
-            gamesPlayed: team.gamesPlayed,
-            projectedWins: team.projectedWins,
-          },
-        });
-      }
-    });
-  }
+  const getFallbackRecord = (teamId: Team['id']) => ({
+    wins: 0,
+    losses: 0,
+    gamesPlayed: 0,
+    projectedWins: 0,
+    ...players.flatMap((player) => player.teams).find((team) => team.teamId === teamId),
+  });
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-fuchsia-50 rounded-xl p-5 shadow-sm border border-fuchsia-200">
-        <div className="text-sm text-gray-600 mb-1">2024 Season</div>
+        <div className="text-sm text-gray-600 mb-1">2025 Season</div>
         <div className="text-2xl text-gray-900">Draft Results</div>
-        <div className="text-sm text-gray-600 mt-2">Snake draft - One team from each division</div>
+        <div className="text-sm text-gray-600 mt-2">Draft order - One team from each division</div>
       </div>
 
       {/* Draft Picks List */}
@@ -61,12 +30,10 @@ export function DraftResults() {
           const teamInfo = getTeamById(pick.teamId);
           if (!teamInfo) return null;
           const record = resolveTeamRecord(
-            {
-              teamId: pick.teamId,
-              ...pick.fallbackRecord,
-            },
+            { teamId: pick.teamId, ...getFallbackRecord(pick.teamId) },
             standings,
           );
+          const player = playerById.get(pick.playerId);
           
           return (
             <div
@@ -93,7 +60,7 @@ export function DraftResults() {
                   {record.wins}-{record.losses}
                 </div>
                 <div className="text-xs px-2 py-1 rounded-full bg-gray-200 text-gray-700">
-                  {pick.playerName}
+                  {player?.name ?? 'Unknown'}
                 </div>
               </div>
             </div>
