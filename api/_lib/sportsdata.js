@@ -51,12 +51,33 @@ function buildAbbrToName(standings) {
 
 function buildWildcardByes(standings) {
   const wildcardByes = {};
+
+  const parseSeed = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === 'number' && !Number.isNaN(value)) return value;
+    const match = String(value).match(/\d+/);
+    return match ? Number(match[0]) : null;
+  };
+
   standings.forEach((team) => {
     const city = team?.City;
     const nickname = team?.Name;
     const fullName = city && nickname ? `${city} ${nickname}` : team?.Name;
     const displayName = team?.FullName || team?.TeamName || fullName;
-    const seed = team?.PlayoffSeed ?? team?.Seed ?? team?.ConferenceSeed;
+    const conferenceRank = parseSeed(team?.ConferenceRank);
+    if (conferenceRank !== null) {
+      if (conferenceRank === 1 && displayName) {
+        wildcardByes[displayName] = true;
+      }
+      return;
+    }
+
+    const seedRaw =
+      team?.PlayoffSeed ??
+      team?.Seed ??
+      team?.ConferenceSeed ??
+      team?.PlayoffRank;
+    const seed = parseSeed(seedRaw);
     if (seed === 1 && displayName) {
       wildcardByes[displayName] = true;
     }
@@ -289,4 +310,5 @@ async function fetchSportsDataPlayoffs(season) {
 module.exports = {
   fetchSportsDataPlayoffs,
   fetchSportsDataSchedule,
+  fetchSportsDataStandings,
 };

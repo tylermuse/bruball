@@ -236,6 +236,32 @@ app.get("/api/playoffs", async (req, res) => {
     ];
 
     const hasSportsDataKey = Boolean(process.env.SPORTSDATAIO_API_KEY);
+    if (req.query.debug && hasSportsDataKey) {
+      const standings = await fetchSportsDataStandings(season, process.env.SPORTSDATAIO_API_KEY);
+      const sample = Array.isArray(standings)
+        ? standings.slice(0, 10).map((team) => ({
+            Team: team?.Team,
+            City: team?.City,
+            Name: team?.Name,
+            FullName: team?.FullName,
+            Division: team?.Division,
+            Conference: team?.Conference,
+            PlayoffSeed: team?.PlayoffSeed,
+            Seed: team?.Seed,
+            ConferenceSeed: team?.ConferenceSeed,
+            ConferenceRank: team?.ConferenceRank,
+            PlayoffRank: team?.PlayoffRank,
+            DivisionRank: team?.DivisionRank,
+          }))
+        : [];
+      return res.json({
+        season: Number(season),
+        updatedAt: new Date().toISOString(),
+        source: "sportsdataio",
+        hasSportsDataKey,
+        sample,
+      });
+    }
     const sportsData = await fetchSportsDataPlayoffs(season);
     if (sportsData) {
       return res.json({
@@ -763,6 +789,13 @@ async function fetchSportsDataPlayoffs(season) {
   const abbrToName = {};
   const wildcardByes = {};
 
+  const parseSeed = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "number" && !Number.isNaN(value)) return value;
+    const match = String(value).match(/\d+/);
+    return match ? Number(match[0]) : null;
+  };
+
   standings.forEach((team) => {
     const abbr = team?.Team || team?.Abbreviation;
     const city = team?.City;
@@ -774,7 +807,20 @@ async function fetchSportsDataPlayoffs(season) {
       abbrToName[abbr] = displayName;
     }
 
-    const seed = team?.PlayoffSeed ?? team?.Seed ?? team?.ConferenceSeed;
+    const conferenceRank = parseSeed(team?.ConferenceRank);
+    if (conferenceRank !== null) {
+      if (conferenceRank === 1 && displayName) {
+        wildcardByes[displayName] = true;
+      }
+      return;
+    }
+
+    const seedRaw =
+      team?.PlayoffSeed ??
+      team?.Seed ??
+      team?.ConferenceSeed ??
+      team?.PlayoffRank;
+    const seed = parseSeed(seedRaw);
     if (seed === 1 && displayName) {
       wildcardByes[displayName] = true;
     }
