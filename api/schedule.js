@@ -15,15 +15,20 @@ async function fetchEspnSchedule(phase, weekParam) {
   const season = data?.season?.year ?? null;
   const seasonTypeId = data?.season?.type?.id ?? null;
   const week = data?.week?.number ?? null;
+  const requestedSeasonTypeId =
+    phase === 'postseason' ? 3 : phase === 'regular' ? 2 : seasonTypeId;
+  const requestedWeek = typeof weekParam === 'number' ? weekParam : week ?? null;
 
   let scheduleData = data;
   let weekLabel = data?.week?.text ?? null;
   let seasonType = seasonTypeId;
   let weekNumber = week;
 
-  if (season && week) {
-    const seasonTypeParam = seasonTypeId ? `&seasontype=${seasonTypeId}` : '';
-    const weekUrl = `${baseUrl}?season=${season}${seasonTypeParam}&week=${week}`;
+  if (season && typeof requestedWeek === 'number') {
+    const seasonTypeParam = requestedSeasonTypeId
+      ? `&seasontype=${requestedSeasonTypeId}`
+      : '';
+    const weekUrl = `${baseUrl}?season=${season}${seasonTypeParam}&week=${requestedWeek}`;
     const weekResponse = await fetch(weekUrl, { headers });
     if (weekResponse.ok) {
       scheduleData = await weekResponse.json();
@@ -33,8 +38,11 @@ async function fetchEspnSchedule(phase, weekParam) {
     }
   }
 
-  if (phase && phase !== 'current') {
-    weekLabel = phase === 'postseason' ? weekLabel : `Week ${weekParam}`;
+  seasonType = scheduleData?.season?.type?.id ?? requestedSeasonTypeId ?? seasonType;
+  weekNumber = scheduleData?.week?.number ?? requestedWeek ?? weekNumber;
+
+  if (phase && phase !== 'current' && typeof requestedWeek === 'number') {
+    weekLabel = phase === 'postseason' ? weekLabel : `Week ${requestedWeek}`;
   }
 
   const events = Array.isArray(scheduleData?.events) ? scheduleData.events : [];
