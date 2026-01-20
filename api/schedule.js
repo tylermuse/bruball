@@ -1,4 +1,26 @@
 const { fetchSportsDataSchedule } = require('./_lib/sportsdata');
+const { getDefaultSeason } = require('./_lib/standings');
+
+async function fetchEspnWeekData(season, seasonTypeParam, weekParam) {
+  const urls = [
+    `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?season=${season}&seasontype=${seasonTypeParam}&week=${weekParam}`,
+    `https://site.api.espn.com/apis/v2/sports/football/nfl/scoreboard?season=${season}&seasontype=${seasonTypeParam}&week=${weekParam}`,
+  ];
+  const headers = {
+    accept: 'application/json, text/plain, */*',
+    'user-agent': 'Mozilla/5.0',
+    referer: 'https://www.espn.com/',
+  };
+
+  for (const url of urls) {
+    const response = await fetch(url, { headers });
+    if (!response.ok) continue;
+    const data = await response.json();
+    if (data) return data;
+  }
+
+  return null;
+}
 
 async function fetchEspnSchedule(phase, weekParam) {
   const baseUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
@@ -12,7 +34,7 @@ async function fetchEspnSchedule(phase, weekParam) {
   if (!response.ok) return null;
   const data = await response.json();
 
-  const season = data?.season?.year ?? null;
+  const season = data?.season?.year ?? getDefaultSeason();
   const seasonTypeId = data?.season?.type?.id ?? null;
   const week = data?.week?.number ?? null;
 
@@ -21,7 +43,26 @@ async function fetchEspnSchedule(phase, weekParam) {
   let seasonType = seasonTypeId;
   let weekNumber = week;
 
-  if (season && week) {
+  if (phase && phase !== 'current' && season && weekParam) {
+    const seasonTypeParam = phase === 'postseason' ? 3 : 2;
+    const weekData = await fetchEspnWeekData(season, seasonTypeParam, weekParam);
+    if (weekData) {
+      scheduleData = weekData;
+      weekLabel =
+        scheduleData?.week?.text ??
+        (phase === 'postseason' ? postseasonLabelForWeek(weekParam) : `Week ${weekParam}`);
+      seasonType = scheduleData?.season?.type?.id ?? seasonTypeParam;
+      weekNumber = scheduleData?.week?.number ?? weekParam;
+    } else {
+      return {
+        season: Number(season),
+        week: weekParam,
+        weekLabel: phase === 'postseason' ? postseasonLabelForWeek(weekParam) : `Week ${weekParam}`,
+        seasonType: seasonTypeParam,
+        games: [],
+      };
+    }
+  } else if (season && week) {
     const seasonTypeParam = seasonTypeId ? `&seasontype=${seasonTypeId}` : '';
     const weekUrl = `${baseUrl}?season=${season}${seasonTypeParam}&week=${week}`;
     const weekResponse = await fetch(weekUrl, { headers });
@@ -33,8 +74,8 @@ async function fetchEspnSchedule(phase, weekParam) {
     }
   }
 
-  if (phase && phase !== 'current') {
-    weekLabel = phase === 'postseason' ? weekLabel : `Week ${weekParam}`;
+  if (phase && phase !== 'current' && !weekLabel && weekParam) {
+    weekLabel = phase === 'postseason' ? postseasonLabelForWeek(weekParam) : `Week ${weekParam}`;
   }
 
   const events = Array.isArray(scheduleData?.events) ? scheduleData.events : [];
@@ -98,6 +139,14 @@ async function fetchEspnSchedule(phase, weekParam) {
   };
 }
 
+function postseasonLabelForWeek(week) {
+  if (week === 1) return 'Wild Card';
+  if (week === 2) return 'Divisional Round';
+  if (week === 3) return 'Conference Round';
+  if (week === 4) return 'Super Bowl';
+  return `Week ${week}`;
+}
+
 function getRoundPoints(weekLabel, seasonType, weekNumber) {
   const label = (weekLabel || '').toLowerCase();
   if (seasonType === 3 || label.includes('wild card') || label.includes('wildcard')) {
@@ -125,7 +174,12 @@ module.exports = async (req, res) => {
   try {
     const phase = req.query.phase;
     const weekParam = req.query.week ? Number(req.query.week) : null;
-    const sportsDataSchedule = await fetchSportsDataSchedule(phase, weekParam);
+    const forceRefresh = req.query.refresh === '1' || req.query.refresh === 'true';
+    const sportsDataSchedule = await fetchSportsDataSchedule(
+      phase,
+      weekParam,
+      forceRefresh,
+    );
     if (sportsDataSchedule) {
       res.json(sportsDataSchedule);
       return;

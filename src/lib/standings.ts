@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getTeamById, type Team } from '../data/teams';
+import { getLocalPlayoffSummary } from './scheduleData';
 import type { Player, TeamRecord } from './gameData';
 
 export interface TeamStanding {
@@ -21,6 +22,7 @@ interface StandingsResponse {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const RETRY_MS = 5 * 60 * 1000;
 
 function getNext7amUtcDelayMs() {
   const now = new Date();
@@ -40,6 +42,16 @@ export function useStandings() {
   useEffect(() => {
     let active = true;
 
+    let timeoutId: number | null = null;
+
+    const scheduleNext = (delayMs: number) => {
+      if (!active) return;
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(load, delayMs);
+    };
+
     const load = async () => {
       try {
         const response = await fetch('/api/standings');
@@ -54,28 +66,21 @@ export function useStandings() {
         setSeason(data.season ?? null);
         setUpdatedAt(data.updatedAt ?? null);
         setError(null);
+        scheduleNext(getNext7amUtcDelayMs());
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : 'Failed to load standings');
+        scheduleNext(RETRY_MS);
       }
     };
 
     load();
-    const cleanupHandles: number[] = [];
-    const timeoutId = setTimeout(() => {
-      if (!active) return;
-      load();
-      const intervalId = setInterval(load, DAY_MS);
-      cleanupHandles.push(intervalId);
-    }, getNext7amUtcDelayMs());
-    cleanupHandles.push(timeoutId);
 
     return () => {
       active = false;
-      cleanupHandles.forEach((handle) => {
-        clearTimeout(handle);
-        clearInterval(handle);
-      });
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
     };
   }, []);
 
@@ -103,6 +108,16 @@ export function usePlayoffs() {
   useEffect(() => {
     let active = true;
 
+    let timeoutId: number | null = null;
+
+    const scheduleNext = (delayMs: number) => {
+      if (!active) return;
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(load, delayMs);
+    };
+
     const load = async () => {
       try {
         const response = await fetch('/api/playoffs');
@@ -114,28 +129,21 @@ export function usePlayoffs() {
         if (!active) return;
         setPlayoffs(data);
         setError(null);
+        scheduleNext(getNext7amUtcDelayMs());
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : 'Failed to load playoffs');
+        scheduleNext(RETRY_MS);
       }
     };
 
     load();
-    const cleanupHandles: number[] = [];
-    const timeoutId = setTimeout(() => {
-      if (!active) return;
-      load();
-      const intervalId = setInterval(load, DAY_MS);
-      cleanupHandles.push(intervalId);
-    }, getNext7amUtcDelayMs());
-    cleanupHandles.push(timeoutId);
 
     return () => {
       active = false;
-      cleanupHandles.forEach((handle) => {
-        clearTimeout(handle);
-        clearInterval(handle);
-      });
+      if (timeoutId !== null) {
+        clearTimeout(timeoutId);
+      }
     };
   }, []);
 
@@ -173,15 +181,30 @@ const PLAYOFF_POINTS = {
   wildCardBye: 1.5,
 };
 
+function isValidPlayoffData(playoffs: PlayoffResponse | null) {
+  if (!playoffs) return false;
+  const winsEntries = Object.values(playoffs.playoffWins ?? {});
+  if (winsEntries.length === 0) return false;
+  for (const record of winsEntries) {
+    const rounds = [record.wildCard, record.divisional, record.conference, record.superBowl];
+    for (const value of rounds) {
+      if (!Number.isFinite(value)) return false;
+      if (value < 0 || value > 1) return false;
+    }
+  }
+  return true;
+}
+
 export function getTeamPlayoffPoints(
   teamId: Team['id'],
   playoffs: PlayoffResponse | null,
 ) {
-  if (!playoffs) return 0;
   const teamInfo = getTeamById(teamId);
   if (!teamInfo) return 0;
-  const playoffWins = playoffs.playoffWins?.[teamInfo.name];
-  const wildcardBye = playoffs.wildcardByes?.[teamInfo.name];
+  const useFallback = !isValidPlayoffData(playoffs);
+  const fallback = useFallback ? getLocalPlayoffSummary() : null;
+  const playoffWins = (useFallback ? fallback?.playoffWins : playoffs?.playoffWins)?.[teamInfo.name];
+  const wildcardBye = (useFallback ? fallback?.wildcardByes : playoffs?.wildcardByes)?.[teamInfo.name];
 
   return (
     (playoffWins?.wildCard ?? 0) * PLAYOFF_POINTS.wildCardWin +
@@ -216,11 +239,10 @@ export function getPlayerPoints(
       )
     : player.totalPoints;
 
-  if (!playoffs) return regularSeasonPoints;
-
-  const playoffPoints = player.teams.reduce((sum, team) => {
-    return sum + getTeamPlayoffPoints(team.teamId, playoffs);
-  }, 0);
+  const playoffPoints = player.teams.reduce(
+    (sum, team) => sum + getTeamPlayoffPoints(team.teamId, playoffs),
+    0,
+  );
 
   return regularSeasonPoints + playoffPoints;
 }
