@@ -132,7 +132,8 @@ function getRoundPoints(weekLabel, seasonType, weekNumber) {
 module.exports = async (req, res) => {
   try {
     const phase = req.query.phase;
-    const weekParam = req.query.week ? Number(req.query.week) : null;
+    const parsedWeek = req.query.week ? Number(req.query.week) : null;
+    const weekParam = Number.isFinite(parsedWeek) ? parsedWeek : null;
     const sportsDataSchedule = await fetchSportsDataSchedule(phase, weekParam);
     if (sportsDataSchedule) {
       res.json(sportsDataSchedule);

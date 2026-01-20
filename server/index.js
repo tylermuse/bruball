@@ -107,7 +107,8 @@ app.get("/api/standings", async (req, res) => {
 app.get("/api/schedule", async (req, res) => {
   try {
     const phase = req.query.phase;
-    const weekParam = req.query.week ? Number(req.query.week) : null;
+    const parsedWeek = req.query.week ? Number(req.query.week) : null;
+    const weekParam = Number.isFinite(parsedWeek) ? parsedWeek : null;
     const sportsDataSchedule = await fetchSportsDataSchedule(phase, weekParam);
     if (sportsDataSchedule) {
       return res.json(sportsDataSchedule);

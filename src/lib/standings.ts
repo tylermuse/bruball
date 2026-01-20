@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getTeamById, type Team } from '../data/teams';
+import { getTeamById, normalizeTeamName, type Team } from '../data/teams';
 import type { Player, TeamRecord } from './gameData';
 
 export interface TeamStanding {
@@ -149,7 +149,13 @@ export function getStandingForTeam(
   if (!standings) return null;
   const teamInfo = getTeamById(teamId);
   if (!teamInfo) return null;
-  return standings[teamInfo.name] ?? null;
+  const direct = standings[teamInfo.name];
+  if (direct) return direct;
+  const normalizedTarget = normalizeTeamName(teamInfo.name);
+  const matchedEntry = Object.entries(standings).find(([name]) => {
+    return normalizeTeamName(name) === normalizedTarget;
+  });
+  return matchedEntry?.[1] ?? null;
 }
 
 export function resolveTeamRecord(
