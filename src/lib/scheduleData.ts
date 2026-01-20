@@ -145,7 +145,7 @@ export function useWeeklySchedule(phase: SchedulePhase, week: number | null) {
         if (phase && phase !== 'current') {
           params.set('phase', phase);
         }
-        if (week) {
+        if (week !== null) {
           params.set('week', String(week));
         }
         const url = params.toString() ? `/api/schedule?${params.toString()}` : '/api/schedule';
