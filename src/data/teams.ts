@@ -348,14 +348,57 @@ export const TEAM_BY_ID = Object.fromEntries(
   TEAMS.map((team) => [team.id, team]),
 ) as Record<string, Team>;
 
+const NAME_REPLACEMENTS: Array<[RegExp, string]> = [
+  [/los angeles/gi, 'la'],
+  [/new york/gi, 'ny'],
+  [/new england/gi, 'ne'],
+  [/tampa bay/gi, 'tb'],
+  [/green bay/gi, 'gb'],
+  [/san francisco/gi, 'sf'],
+  [/las vegas/gi, 'lv'],
+  [/kansas city/gi, 'kc'],
+  [/new orleans/gi, 'no'],
+];
+
+export function normalizeTeamName(name: string): string {
+  let value = name.toLowerCase();
+  NAME_REPLACEMENTS.forEach(([pattern, replacement]) => {
+    value = value.replace(pattern, replacement);
+  });
+  return value.replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '').trim();
+}
+
 const TEAM_BY_NAME = Object.fromEntries(
   TEAMS.map((team) => [team.name.toLowerCase(), team]),
 ) as Record<string, Team>;
+
+const CITY_COUNTS = TEAMS.reduce<Record<string, number>>((acc, team) => {
+  const key = normalizeTeamName(team.city);
+  acc[key] = (acc[key] ?? 0) + 1;
+  return acc;
+}, {});
+
+const TEAM_BY_NORMALIZED = TEAMS.reduce<Record<string, Team>>((acc, team) => {
+  const aliases = new Set<string>([team.name]);
+  if (CITY_COUNTS[normalizeTeamName(team.city)] === 1) {
+    aliases.add(team.city);
+  }
+  const nameParts = team.name.split(' ');
+  if (nameParts.length > 1) {
+    aliases.add(nameParts.slice(-1).join(' '));
+  }
+  aliases.forEach((alias) => {
+    acc[normalizeTeamName(alias)] = team;
+  });
+  return acc;
+}, {});
 
 export function getTeamById(id: Team['id']): Team | undefined {
   return TEAM_BY_ID[id];
 }
 
 export function getTeamByName(name: string): Team | undefined {
-  return TEAM_BY_NAME[name.toLowerCase()];
+  const direct = TEAM_BY_NAME[name.toLowerCase()];
+  if (direct) return direct;
+  return TEAM_BY_NORMALIZED[normalizeTeamName(name)];
 }

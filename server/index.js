@@ -107,7 +107,8 @@ app.get("/api/standings", async (req, res) => {
 app.get("/api/schedule", async (req, res) => {
   try {
     const phase = req.query.phase;
-    const weekParam = req.query.week ? Number(req.query.week) : null;
+    const parsedWeek = req.query.week ? Number(req.query.week) : null;
+    const weekParam = Number.isFinite(parsedWeek) ? parsedWeek : null;
     const sportsDataSchedule = await fetchSportsDataSchedule(phase, weekParam);
     if (sportsDataSchedule) {
       return res.json(sportsDataSchedule);
@@ -131,12 +132,18 @@ app.get("/api/schedule", async (req, res) => {
     const season = data?.season?.year ?? null;
     const week = data?.week?.number ?? null;
     const seasonTypeId = data?.season?.type?.id ?? null;
+    const requestedSeasonTypeId =
+      phase === "postseason" ? 3 : phase === "regular" ? 2 : seasonTypeId;
+    const requestedWeek =
+      typeof weekParam === "number" ? weekParam : week ?? null;
 
     let scheduleData = data;
 
-    if (season && week) {
-      const seasonTypeParam = seasonTypeId ? `&seasontype=${seasonTypeId}` : "";
-      const weekUrl = `${baseUrl}?season=${season}${seasonTypeParam}&week=${week}`;
+    if (season && typeof requestedWeek === "number") {
+      const seasonTypeParam = requestedSeasonTypeId
+        ? `&seasontype=${requestedSeasonTypeId}`
+        : "";
+      const weekUrl = `${baseUrl}?season=${season}${seasonTypeParam}&week=${requestedWeek}`;
       const weekResponse = await fetch(weekUrl, {
         headers: {
           "accept": "application/json, text/plain, */*",
@@ -153,9 +160,22 @@ app.get("/api/schedule", async (req, res) => {
       ? scheduleData.events
       : [];
 
-    const weekLabel = scheduleData?.week?.text ?? null;
-    const seasonType = scheduleData?.season?.type?.id ?? seasonTypeId ?? null;
-    const weekNumber = scheduleData?.week?.number ?? week ?? null;
+    let weekLabel = scheduleData?.week?.text ?? null;
+    const seasonType =
+      scheduleData?.season?.type?.id ??
+      requestedSeasonTypeId ??
+      seasonTypeId ??
+      null;
+    const weekNumber =
+      scheduleData?.week?.number ??
+      requestedWeek ??
+      week ??
+      null;
+
+    if (phase && phase !== "current" && typeof requestedWeek === "number") {
+      weekLabel =
+        phase === "postseason" ? weekLabel : `Week ${requestedWeek}`;
+    }
     const roundPoints = getRoundPoints(weekLabel, seasonType, weekNumber);
 
     const games = events
