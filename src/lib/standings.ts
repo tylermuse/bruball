@@ -222,7 +222,9 @@ export function getTeamPoints(
 ) {
   const standing = getStandingForTeam(teamId, standings);
   const regularWins = standing?.wins ?? 0;
-  return regularWins + getTeamPlayoffPoints(teamId, playoffs);
+  const regularTies = standing?.ties ?? 0;
+  const regularPoints = regularWins + regularTies * 0.5;
+  return regularPoints + getTeamPlayoffPoints(teamId, playoffs);
 }
 
 export function getPlayerPoints(
@@ -234,7 +236,10 @@ export function getPlayerPoints(
 
   const regularSeasonPoints = standings
     ? player.teams.reduce(
-        (sum, team) => sum + resolveTeamRecord(team, standings).wins,
+        (sum, team) => {
+          const record = resolveTeamRecord(team, standings);
+          return sum + record.wins + record.ties * 0.5;
+        },
         0,
       )
     : player.totalPoints;
