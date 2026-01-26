@@ -1,13 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Schedule } from './components/Schedule';
 import { Leaderboard } from './components/Leaderboard';
 import { DraftResults } from './components/DraftResults';
-import { Calendar, Trophy, CircleCheckBig } from 'lucide-react';
+import { Calendar, Trophy, CircleCheckBig, RotateCw } from 'lucide-react';
 import { useStandings } from './lib/standings';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'leaderboard' | 'draft'>('schedule');
-  const { updatedAt } = useStandings();
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { updatedAt } = useStandings(refreshKey);
+  useEffect(() => {
+    const refresh = () => setRefreshKey((value) => value + 1);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        refresh();
+      }
+    };
+    refresh();
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
   const updatedLabel = updatedAt
     ? new Date(updatedAt).toLocaleString('en-US', {
         month: 'short',
@@ -20,7 +36,7 @@ export default function App() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10 shadow-sm relative">
         <h1 className="text-center text-gray-900">Bruball</h1>
         <p className="text-center text-gray-600 text-sm mt-1">2025 Season</p>
         {updatedLabel && (
@@ -28,12 +44,20 @@ export default function App() {
             Updated {updatedLabel}
           </p>
         )}
+        <button
+          type="button"
+          onClick={() => setRefreshKey((value) => value + 1)}
+          className="absolute right-4 top-4 inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 hover:bg-gray-50"
+        >
+          <RotateCw className="size-3" />
+          Refresh
+        </button>
       </div>
 
       {/* Tab Content */}
       <div className="px-4 py-6">
-        {activeTab === 'schedule' && <Schedule />}
-        {activeTab === 'leaderboard' && <Leaderboard />}
+        {activeTab === 'schedule' && <Schedule refreshKey={refreshKey} />}
+        {activeTab === 'leaderboard' && <Leaderboard refreshKey={refreshKey} />}
         {activeTab === 'draft' && <DraftResults />}
       </div>
 

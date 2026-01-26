@@ -130,7 +130,11 @@ export function getScheduleWithOwners(schedule: Game[]): GameWithOwners[] {
 
 export type SchedulePhase = 'current' | 'regular' | 'postseason';
 
-export function useWeeklySchedule(phase: SchedulePhase, week: number | null) {
+export function useWeeklySchedule(
+  phase: SchedulePhase,
+  week: number | null,
+  refreshKey?: number,
+) {
   const [games, setGames] = useState<Game[]>(weeklySchedule);
   const [weekLabel, setWeekLabel] = useState<string | null>('Week 15 Schedule');
   const [currentWeek, setCurrentWeek] = useState<number | null>(null);
@@ -145,7 +149,7 @@ export function useWeeklySchedule(phase: SchedulePhase, week: number | null) {
         if (phase && phase !== 'current') {
           params.set('phase', phase);
         }
-        if (week) {
+        if (week !== null) {
           params.set('week', String(week));
         }
         const url = params.toString() ? `/api/schedule?${params.toString()}` : '/api/schedule';
@@ -173,7 +177,7 @@ export function useWeeklySchedule(phase: SchedulePhase, week: number | null) {
     return () => {
       active = false;
     };
-  }, [phase, week]);
+  }, [phase, week, refreshKey]);
 
   return { games, weekLabel, currentWeek, currentSeasonType };
 }
