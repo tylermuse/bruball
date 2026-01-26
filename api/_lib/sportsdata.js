@@ -8,29 +8,41 @@ function isSportsDataFinal(game) {
   return false;
 }
 
-async function fetchSportsDataJson(url) {
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const responseCache = new Map();
+
+async function fetchSportsDataJson(url, forceRefresh = false) {
+  const cached = responseCache.get(url);
+  if (!forceRefresh && cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+    return cached.data;
+  }
+
   const response = await fetch(url);
-  if (!response.ok) return null;
+  if (!response.ok) {
+    return cached?.data ?? null;
+  }
   try {
-    return await response.json();
+    const data = await response.json();
+    responseCache.set(url, { timestamp: Date.now(), data });
+    return data;
   } catch {
-    return null;
+    return cached?.data ?? null;
   }
 }
 
-async function fetchSportsDataStandings(season, apiKey) {
+async function fetchSportsDataStandings(season, apiKey, forceRefresh = false) {
   const seasonOptions = [`${season}`, `${season}REG`];
   for (const seasonValue of seasonOptions) {
     const url = `https://api.sportsdata.io/v3/nfl/scores/json/Standings/${seasonValue}?key=${apiKey}`;
-    const data = await fetchSportsDataJson(url);
+    const data = await fetchSportsDataJson(url, forceRefresh);
     if (Array.isArray(data) && data.length > 0) return data;
   }
   return null;
 }
 
-async function fetchSportsDataScoresByWeek(seasonValue, week, apiKey) {
+async function fetchSportsDataScoresByWeek(seasonValue, week, apiKey, forceRefresh = false) {
   const url = `https://api.sportsdata.io/v3/nfl/scores/json/ScoresByWeek/${seasonValue}/${week}?key=${apiKey}`;
-  const data = await fetchSportsDataJson(url);
+  const data = await fetchSportsDataJson(url, forceRefresh);
   return Array.isArray(data) ? data : [];
 }
 
@@ -101,7 +113,7 @@ function postseasonLabelForWeek(week) {
   return `Week ${week}`;
 }
 
-async function findCurrentPostseasonWeek(season, apiKey) {
+async function findCurrentPostseasonWeek(season, apiKey, forceRefresh = false) {
   const now = new Date();
   const windowStart = new Date(now);
   windowStart.setDate(now.getDate() - 5);
@@ -117,7 +129,12 @@ async function findCurrentPostseasonWeek(season, apiKey) {
   ];
 
   for (const round of rounds) {
-    const games = await fetchSportsDataScoresByWeek(seasonValue, round.week, apiKey);
+    const games = await fetchSportsDataScoresByWeek(
+      seasonValue,
+      round.week,
+      apiKey,
+      forceRefresh,
+    );
     const inWindow = games.some((game) => {
       const dateValue = game?.Date;
       if (!dateValue) return false;
@@ -132,8 +149,8 @@ async function findCurrentPostseasonWeek(season, apiKey) {
   return null;
 }
 
-async function fetchSportsDataScheduleByWeek(season, week, phase, apiKey) {
-  const standings = await fetchSportsDataStandings(season, apiKey);
+async function fetchSportsDataScheduleByWeek(season, week, phase, apiKey, forceRefresh = false) {
+  const standings = await fetchSportsDataStandings(season, apiKey, forceRefresh);
   if (!standings) return null;
   const abbrToName = buildAbbrToName(standings);
 
@@ -145,7 +162,12 @@ async function fetchSportsDataScheduleByWeek(season, week, phase, apiKey) {
   const weekLabel = isPostseason ? postseasonLabelForWeek(week) : `Week ${week}`;
 
   for (const seasonValue of seasonValues) {
-    const games = await fetchSportsDataScoresByWeek(seasonValue, week, apiKey);
+    const games = await fetchSportsDataScoresByWeek(
+      seasonValue,
+      week,
+      apiKey,
+      forceRefresh,
+    );
     const mappedGames = games
       .map((game) => mapSportsDataGame(game, abbrToName, pointsAtStake))
       .filter(Boolean);
@@ -160,13 +182,7 @@ async function fetchSportsDataScheduleByWeek(season, week, phase, apiKey) {
     }
   }
 
-  return {
-    season: Number(season),
-    week,
-    weekLabel,
-    seasonType: isPostseason ? 3 : 2,
-    games: [],
-  };
+  return null;
 }
 
 function mapSportsDataGame(game, abbrToName, pointsAtStake) {
@@ -209,31 +225,32 @@ function mapSportsDataGame(game, abbrToName, pointsAtStake) {
   };
 }
 
-async function fetchSportsDataSchedule(phase, weekParam) {
+async function fetchSportsDataSchedule(phase, weekParam, forceRefresh = false) {
   const apiKey = process.env.SPORTSDATAIO_API_KEY;
   if (!apiKey) return null;
 
   const season = getDefaultSeason();
 
   if (phase === 'regular' && weekParam) {
-    return fetchSportsDataScheduleByWeek(season, weekParam, 'regular', apiKey);
+    return fetchSportsDataScheduleByWeek(season, weekParam, 'regular', apiKey, forceRefresh);
   }
 
   if (phase === 'postseason' && weekParam) {
-    return fetchSportsDataScheduleByWeek(season, weekParam, 'postseason', apiKey);
+    return fetchSportsDataScheduleByWeek(season, weekParam, 'postseason', apiKey, forceRefresh);
   }
 
-  const standings = await fetchSportsDataStandings(season, apiKey);
+  const standings = await fetchSportsDataStandings(season, apiKey, forceRefresh);
   if (!standings) return null;
   const abbrToName = buildAbbrToName(standings);
 
-  const postseasonWeek = await findCurrentPostseasonWeek(season, apiKey);
+  const postseasonWeek = await findCurrentPostseasonWeek(season, apiKey, forceRefresh);
   if (!postseasonWeek) return null;
 
   const games = await fetchSportsDataScoresByWeek(
     postseasonWeek.seasonValue,
     postseasonWeek.week,
     apiKey,
+    forceRefresh,
   );
   const mappedGames = games
     .map((game) => mapSportsDataGame(game, abbrToName, postseasonWeek.pointsAtStake))
@@ -250,11 +267,11 @@ async function fetchSportsDataSchedule(phase, weekParam) {
   };
 }
 
-async function fetchSportsDataPlayoffs(season) {
+async function fetchSportsDataPlayoffs(season, forceRefresh = false) {
   const apiKey = process.env.SPORTSDATAIO_API_KEY;
   if (!apiKey) return null;
 
-  const standings = await fetchSportsDataStandings(season, apiKey);
+  const standings = await fetchSportsDataStandings(season, apiKey, forceRefresh);
   if (!standings) return null;
 
   const abbrToName = buildAbbrToName(standings);
@@ -270,7 +287,12 @@ async function fetchSportsDataPlayoffs(season) {
   ];
 
   for (const round of rounds) {
-    const games = await fetchSportsDataScoresByWeek(seasonPost, round.week, apiKey);
+    const games = await fetchSportsDataScoresByWeek(
+      seasonPost,
+      round.week,
+      apiKey,
+      forceRefresh,
+    );
     games.forEach((game) => {
       if (!isSportsDataFinal(game)) return;
       const winnerAbbr = game?.Winner || null;

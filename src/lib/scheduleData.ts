@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getAllPlayers } from './gameData';
 import { getTeamByName } from '../data/teams';
 import type { Team } from '../data/teams';
+import schedule2025 from '../data/schedule-2025.json';
 
 export interface Game {
   id: string;
@@ -29,6 +30,216 @@ interface ScheduleResponse {
   weekLabel: string | null;
   seasonType?: number | null;
   games: ApiGame[];
+}
+
+interface RawScheduleGame {
+  game_id: string;
+  season: number;
+  game_type: string;
+  stage: string;
+  week: number;
+  gameday: string;
+  weekday: string;
+  gametime: string;
+  away_team: string;
+  home_team: string;
+  away_score: number;
+  home_score: number;
+  winner: string | null;
+  played: boolean;
+}
+
+const TEAM_ABBR_TO_NAME: Record<string, string> = {
+  ARI: 'Arizona Cardinals',
+  ATL: 'Atlanta Falcons',
+  BAL: 'Baltimore Ravens',
+  BUF: 'Buffalo Bills',
+  CAR: 'Carolina Panthers',
+  CHI: 'Chicago Bears',
+  CIN: 'Cincinnati Bengals',
+  CLE: 'Cleveland Browns',
+  DAL: 'Dallas Cowboys',
+  DEN: 'Denver Broncos',
+  DET: 'Detroit Lions',
+  GB: 'Green Bay Packers',
+  HOU: 'Houston Texans',
+  IND: 'Indianapolis Colts',
+  JAX: 'Jacksonville Jaguars',
+  KC: 'Kansas City Chiefs',
+  LA: 'Los Angeles Rams',
+  LAC: 'Los Angeles Chargers',
+  LV: 'Las Vegas Raiders',
+  MIA: 'Miami Dolphins',
+  MIN: 'Minnesota Vikings',
+  NE: 'New England Patriots',
+  NO: 'New Orleans Saints',
+  NYG: 'New York Giants',
+  NYJ: 'New York Jets',
+  PHI: 'Philadelphia Eagles',
+  PIT: 'Pittsburgh Steelers',
+  SEA: 'Seattle Seahawks',
+  SF: 'San Francisco 49ers',
+  TB: 'Tampa Bay Buccaneers',
+  TEN: 'Tennessee Titans',
+  WAS: 'Washington Commanders',
+};
+
+const POSTSEASON_MAP = {
+  WC: { week: 1, label: 'Wild Card', points: 1.5, round: 'wildCard' },
+  DIV: { week: 2, label: 'Divisional Round', points: 2.5, round: 'divisional' },
+  CON: { week: 3, label: 'Conference Round', points: 3.5, round: 'conference' },
+  SB: { week: 4, label: 'Super Bowl', points: 5, round: 'superBowl' },
+};
+
+const LOCAL_SCHEDULE: RawScheduleGame[] = schedule2025 as RawScheduleGame[];
+
+function buildDateString(game: RawScheduleGame) {
+  const time = game.gametime?.length === 5 ? `${game.gametime}:00` : game.gametime;
+  return `${game.gameday}T${time}`;
+}
+
+function getPostseasonWeek(gameType: string) {
+  const entry = POSTSEASON_MAP[gameType as keyof typeof POSTSEASON_MAP];
+  return entry?.week ?? null;
+}
+
+function mapRawToApiGame(game: RawScheduleGame, pointsAtStake: number): ApiGame | null {
+  const homeName = TEAM_ABBR_TO_NAME[game.home_team];
+  const awayName = TEAM_ABBR_TO_NAME[game.away_team];
+  if (!homeName || !awayName) return null;
+  const winnerName = game.winner && game.winner !== 'TIE' ? TEAM_ABBR_TO_NAME[game.winner] : null;
+
+  return {
+    id: game.game_id,
+    date: buildDateString(game),
+    homeTeamName: homeName,
+    awayTeamName: awayName,
+    pointsAtStake,
+    completed: Boolean(game.played),
+    winnerName: winnerName ?? null,
+  };
+}
+
+function getLocalSchedule(phase: SchedulePhase, week: number | null) {
+  if (!week) return null;
+  if (phase === 'regular') {
+    const games = LOCAL_SCHEDULE.filter(
+      (game) => game.game_type === 'REG' && game.week === week,
+    )
+      .map((game) => mapRawToApiGame(game, 1))
+      .filter((game): game is ApiGame => Boolean(game));
+    return {
+      week,
+      weekLabel: `Week ${week}`,
+      seasonType: 2,
+      games,
+    };
+  }
+
+  if (phase === 'postseason') {
+    const postseasonKey = Object.keys(POSTSEASON_MAP).find(
+      (key) => POSTSEASON_MAP[key as keyof typeof POSTSEASON_MAP].week === week,
+    ) as keyof typeof POSTSEASON_MAP | undefined;
+    if (!postseasonKey) return null;
+    const mapEntry = POSTSEASON_MAP[postseasonKey];
+    const games = LOCAL_SCHEDULE.filter(
+      (game) => game.game_type === postseasonKey,
+    )
+      .map((game) => mapRawToApiGame(game, mapEntry.points))
+      .filter((game): game is ApiGame => Boolean(game));
+    return {
+      week,
+      weekLabel: mapEntry.label,
+      seasonType: 3,
+      games,
+    };
+  }
+
+  return null;
+}
+
+function getLocalCurrentSchedule() {
+  if (!LOCAL_SCHEDULE.length) return null;
+  const now = Date.now();
+  let bestPast: { game: RawScheduleGame; date: number } | null = null;
+  let bestFuture: { game: RawScheduleGame; date: number } | null = null;
+
+  for (const game of LOCAL_SCHEDULE) {
+    const dateValue = Date.parse(buildDateString(game));
+    if (Number.isNaN(dateValue)) continue;
+    if (dateValue <= now) {
+      if (!bestPast || dateValue > bestPast.date) {
+        bestPast = { game, date: dateValue };
+      }
+    } else if (!bestFuture || dateValue < bestFuture.date) {
+      bestFuture = { game, date: dateValue };
+    }
+  }
+
+  const target = bestPast?.game ?? bestFuture?.game;
+  if (!target) return null;
+
+  if (target.game_type === 'REG') {
+    return getLocalSchedule('regular', target.week);
+  }
+
+  const postseasonWeek = getPostseasonWeek(target.game_type);
+  if (!postseasonWeek) return null;
+  return getLocalSchedule('postseason', postseasonWeek);
+}
+
+let localPlayoffCache: {
+  playoffWins: Record<string, { wildCard: number; divisional: number; conference: number; superBowl: number }>;
+  wildcardByes: Record<string, boolean>;
+} | null = null;
+
+export function getLocalPlayoffSummary() {
+  if (localPlayoffCache) return localPlayoffCache;
+
+  const playoffWins: Record<string, { wildCard: number; divisional: number; conference: number; superBowl: number }> = {};
+  const wildcardTeams = new Set<string>();
+  const divisionalTeams = new Set<string>();
+
+  LOCAL_SCHEDULE.forEach((game) => {
+    const postseason = POSTSEASON_MAP[game.game_type as keyof typeof POSTSEASON_MAP];
+    if (!postseason) return;
+    const homeName = TEAM_ABBR_TO_NAME[game.home_team];
+    const awayName = TEAM_ABBR_TO_NAME[game.away_team];
+    if (!homeName || !awayName) return;
+
+    if (postseason.round === 'wildCard') {
+      wildcardTeams.add(homeName);
+      wildcardTeams.add(awayName);
+    }
+    if (postseason.round === 'divisional') {
+      divisionalTeams.add(homeName);
+      divisionalTeams.add(awayName);
+    }
+
+    if (!game.played) return;
+    if (!game.winner || game.winner === 'TIE') return;
+    const winnerName = TEAM_ABBR_TO_NAME[game.winner];
+    if (!winnerName) return;
+
+    const record = playoffWins[winnerName] || {
+      wildCard: 0,
+      divisional: 0,
+      conference: 0,
+      superBowl: 0,
+    };
+    record[postseason.round as keyof typeof record] += 1;
+    playoffWins[winnerName] = record;
+  });
+
+  const wildcardByes: Record<string, boolean> = {};
+  divisionalTeams.forEach((team) => {
+    if (!wildcardTeams.has(team)) {
+      wildcardByes[team] = true;
+    }
+  });
+
+  localPlayoffCache = { playoffWins, wildcardByes };
+  return localPlayoffCache;
 }
 
 // Week 15 NFL Schedule
@@ -145,6 +356,36 @@ export function useWeeklySchedule(
 
     const load = async () => {
       try {
+        if (phase === 'current') {
+          const local = getLocalCurrentSchedule();
+          if (local && local.games.length > 0) {
+            if (!active) return;
+            const nextGames = local.games
+              .map(toScheduleGame)
+              .filter((game): game is Game => Boolean(game));
+            setWeekLabel(local.weekLabel);
+            setCurrentWeek(local.week);
+            setCurrentSeasonType(local.seasonType ?? null);
+            setGames(nextGames);
+            return;
+          }
+        }
+
+        if (phase !== 'current' && week) {
+          const local = getLocalSchedule(phase, week);
+          if (local && local.games.length > 0) {
+            if (!active) return;
+            const nextGames = local.games
+              .map(toScheduleGame)
+              .filter((game): game is Game => Boolean(game));
+            setWeekLabel(local.weekLabel);
+            setCurrentWeek(local.week);
+            setCurrentSeasonType(local.seasonType);
+            setGames(nextGames);
+            return;
+          }
+        }
+
         const params = new URLSearchParams();
         if (phase && phase !== 'current') {
           params.set('phase', phase);
@@ -162,12 +403,28 @@ export function useWeeklySchedule(
           .map(toScheduleGame)
           .filter((game): game is Game => Boolean(game));
 
-        const label =
+        let nextGames = mappedGames;
+        let nextWeekLabel =
           data.weekLabel ?? (data.week ? `Week ${data.week}` : 'This Week');
-        setWeekLabel(label);
-        setCurrentWeek(data.week ?? null);
-        setCurrentSeasonType(data.seasonType ?? null);
-        setGames(mappedGames);
+        let nextSeasonType = data.seasonType ?? null;
+        let nextWeek = data.week ?? null;
+
+        if (mappedGames.length === 0) {
+          const fallback = getLocalSchedule(phase, week ?? data.week ?? null);
+          if (fallback && fallback.games.length > 0) {
+            nextGames = fallback.games
+              .map(toScheduleGame)
+              .filter((game): game is Game => Boolean(game));
+            nextWeekLabel = fallback.weekLabel;
+            nextSeasonType = fallback.seasonType;
+            nextWeek = fallback.week;
+          }
+        }
+
+        setWeekLabel(nextWeekLabel);
+        setCurrentWeek(nextWeek);
+        setCurrentSeasonType(nextSeasonType);
+        setGames(nextGames);
       } catch {
         // Keep fallback schedule on error.
       }

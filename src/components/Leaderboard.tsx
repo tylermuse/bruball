@@ -30,7 +30,7 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-xl text-gray-900 mb-2">Season Standings</h2>
-        <p className="text-fuchsia-600 text-sm">Ranked by total wins</p>
+        <p className="text-fuchsia-600 text-sm">Ranked by total points</p>
       </div>
 
       {/* Leaderboard */}
@@ -79,8 +79,8 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
                 <div className="space-y-2">
                   {[...player.teams].sort(
                     (a, b) =>
-                      resolveTeamRecord(b, standings).wins -
-                      resolveTeamRecord(a, standings).wins,
+                      getTeamPoints(b.teamId, standings, playoffs) -
+                      getTeamPoints(a.teamId, standings, playoffs),
                   ).map((team) => {
                     const teamInfo = getTeamById(team.teamId);
                     const record = resolveTeamRecord(team, standings);
