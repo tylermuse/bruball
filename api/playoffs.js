@@ -86,13 +86,14 @@ function mapPlayoffGames(data) {
 module.exports = async (req, res) => {
   try {
     const season = req.query.season ?? getDefaultSeason();
-    const sportsData = await fetchSportsDataPlayoffs(season);
+    const forceRefresh = req.query.refresh === '1' || req.query.refresh === 'true';
+    const sportsData = await fetchSportsDataPlayoffs(season, forceRefresh);
 
     if (sportsData) {
       res.json({
         season: Number(season),
         updatedAt: new Date().toISOString(),
-        source: 'sportsdataio',
+        source: 'espn-fallback',
         hasSportsDataKey: Boolean(process.env.SPORTSDATAIO_API_KEY),
         rounds: ROUND_WEEKS,
         playoffWins: sportsData.playoffWins,

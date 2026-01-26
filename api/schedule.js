@@ -114,6 +114,14 @@ async function fetchEspnSchedule(phase, weekParam) {
   };
 }
 
+function postseasonLabelForWeek(week) {
+  if (week === 1) return 'Wild Card';
+  if (week === 2) return 'Divisional Round';
+  if (week === 3) return 'Conference Round';
+  if (week === 4) return 'Super Bowl';
+  return `Week ${week}`;
+}
+
 function getRoundPoints(weekLabel, seasonType, weekNumber) {
   const label = (weekLabel || '').toLowerCase();
   if (seasonType === 3 || label.includes('wild card') || label.includes('wildcard')) {
