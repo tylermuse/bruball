@@ -1,27 +1,6 @@
 const { fetchSportsDataSchedule } = require('./_lib/sportsdata');
 const { getDefaultSeason } = require('./_lib/standings');
 
-async function fetchEspnWeekData(season, seasonTypeParam, weekParam) {
-  const urls = [
-    `https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?season=${season}&seasontype=${seasonTypeParam}&week=${weekParam}`,
-    `https://site.api.espn.com/apis/v2/sports/football/nfl/scoreboard?season=${season}&seasontype=${seasonTypeParam}&week=${weekParam}`,
-  ];
-  const headers = {
-    accept: 'application/json, text/plain, */*',
-    'user-agent': 'Mozilla/5.0',
-    referer: 'https://www.espn.com/',
-  };
-
-  for (const url of urls) {
-    const response = await fetch(url, { headers });
-    if (!response.ok) continue;
-    const data = await response.json();
-    if (data) return data;
-  }
-
-  return null;
-}
-
 async function fetchEspnSchedule(phase, weekParam) {
   const baseUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
   const headers = {
@@ -30,41 +9,27 @@ async function fetchEspnSchedule(phase, weekParam) {
     referer: 'https://www.espn.com/',
   };
 
+  const defaultSeason = getDefaultSeason();
   const response = await fetch(baseUrl, { headers });
-  if (!response.ok) return null;
-  const data = await response.json();
+  const data = response.ok ? await response.json() : null;
 
-  const season = data?.season?.year ?? getDefaultSeason();
+  const season = data?.season?.year ?? defaultSeason ?? null;
   const seasonTypeId = data?.season?.type?.id ?? null;
   const week = data?.week?.number ?? null;
+  const requestedSeasonTypeId =
+    phase === 'postseason' ? 3 : phase === 'regular' ? 2 : seasonTypeId;
+  const requestedWeek = typeof weekParam === 'number' ? weekParam : week ?? null;
 
   let scheduleData = data;
   let weekLabel = data?.week?.text ?? null;
   let seasonType = seasonTypeId;
   let weekNumber = week;
 
-  if (phase && phase !== 'current' && season && weekParam) {
-    const seasonTypeParam = phase === 'postseason' ? 3 : 2;
-    const weekData = await fetchEspnWeekData(season, seasonTypeParam, weekParam);
-    if (weekData) {
-      scheduleData = weekData;
-      weekLabel =
-        scheduleData?.week?.text ??
-        (phase === 'postseason' ? postseasonLabelForWeek(weekParam) : `Week ${weekParam}`);
-      seasonType = scheduleData?.season?.type?.id ?? seasonTypeParam;
-      weekNumber = scheduleData?.week?.number ?? weekParam;
-    } else {
-      return {
-        season: Number(season),
-        week: weekParam,
-        weekLabel: phase === 'postseason' ? postseasonLabelForWeek(weekParam) : `Week ${weekParam}`,
-        seasonType: seasonTypeParam,
-        games: [],
-      };
-    }
-  } else if (season && week) {
-    const seasonTypeParam = seasonTypeId ? `&seasontype=${seasonTypeId}` : '';
-    const weekUrl = `${baseUrl}?season=${season}${seasonTypeParam}&week=${week}`;
+  if (season && typeof requestedWeek === 'number') {
+    const seasonTypeParam = requestedSeasonTypeId
+      ? `&seasontype=${requestedSeasonTypeId}`
+      : '';
+    const weekUrl = `${baseUrl}?season=${season}${seasonTypeParam}&week=${requestedWeek}`;
     const weekResponse = await fetch(weekUrl, { headers });
     if (weekResponse.ok) {
       scheduleData = await weekResponse.json();
@@ -74,11 +39,21 @@ async function fetchEspnSchedule(phase, weekParam) {
     }
   }
 
-  if (phase && phase !== 'current' && !weekLabel && weekParam) {
-    weekLabel = phase === 'postseason' ? postseasonLabelForWeek(weekParam) : `Week ${weekParam}`;
+  const normalizedSchedule = scheduleData?.content?.events
+    ? scheduleData.content
+    : scheduleData;
+  seasonType =
+    normalizedSchedule?.season?.type?.id ?? requestedSeasonTypeId ?? seasonType;
+  weekNumber = normalizedSchedule?.week?.number ?? requestedWeek ?? weekNumber;
+  weekLabel = normalizedSchedule?.week?.text ?? weekLabel;
+
+  if (phase && phase !== 'current' && typeof requestedWeek === 'number') {
+    weekLabel = phase === 'postseason' ? weekLabel : `Week ${requestedWeek}`;
   }
 
-  const events = Array.isArray(scheduleData?.events) ? scheduleData.events : [];
+  const events = Array.isArray(normalizedSchedule?.events)
+    ? normalizedSchedule.events
+    : [];
   const roundPoints = getRoundPoints(weekLabel, seasonType, weekNumber);
 
   const games = events
@@ -131,7 +106,7 @@ async function fetchEspnSchedule(phase, weekParam) {
     .filter(Boolean);
 
   return {
-    season: scheduleData?.season?.year ?? season ?? null,
+    season: normalizedSchedule?.season?.year ?? season ?? null,
     week: weekNumber,
     weekLabel,
     seasonType,
@@ -173,13 +148,9 @@ function getRoundPoints(weekLabel, seasonType, weekNumber) {
 module.exports = async (req, res) => {
   try {
     const phase = req.query.phase;
-    const weekParam = req.query.week ? Number(req.query.week) : null;
-    const forceRefresh = req.query.refresh === '1' || req.query.refresh === 'true';
-    const sportsDataSchedule = await fetchSportsDataSchedule(
-      phase,
-      weekParam,
-      forceRefresh,
-    );
+    const parsedWeek = req.query.week ? Number(req.query.week) : null;
+    const weekParam = Number.isFinite(parsedWeek) ? parsedWeek : null;
+    const sportsDataSchedule = await fetchSportsDataSchedule(phase, weekParam);
     if (sportsDataSchedule) {
       res.json(sportsDataSchedule);
       return;

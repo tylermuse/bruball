@@ -4,9 +4,13 @@ import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById } from '../data/teams';
 import { getPlayerPoints, getTeamPoints, resolveTeamRecord, usePlayoffs, useStandings } from '../lib/standings';
 
-export function Leaderboard() {
-  const { standings } = useStandings();
-  const { playoffs } = usePlayoffs();
+type LeaderboardProps = {
+  refreshKey?: number;
+};
+
+export function Leaderboard({ refreshKey }: LeaderboardProps) {
+  const { standings } = useStandings(refreshKey);
+  const { playoffs } = usePlayoffs(refreshKey);
   const players = getAllPlayers()
     .map((player) => ({
       ...player,

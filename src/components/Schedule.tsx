@@ -4,13 +4,18 @@ import { getTeamById } from '../data/teams';
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-export function Schedule() {
+type ScheduleProps = {
+  refreshKey?: number;
+};
+
+export function Schedule({ refreshKey }: ScheduleProps) {
   const [phase, setPhase] = useState<SchedulePhase>('current');
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const { games, weekLabel, currentWeek, currentSeasonType } = useWeeklySchedule(
     phase,
     selectedWeek,
+    refreshKey,
   );
   const schedule = getScheduleWithOwners(games);
 

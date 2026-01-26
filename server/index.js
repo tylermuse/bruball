@@ -4,6 +4,12 @@ const app = express();
 const PORT = process.env.PORT || 5050;
 const SERVER_VERSION = "standings-debug-v3";
 
+function getDefaultSeason() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month < 8 ? now.getFullYear() - 1 : now.getFullYear();
+}
+
 app.get("/api/ping", (req, res) => {
   res.json({
     ok: true,
@@ -107,7 +113,8 @@ app.get("/api/standings", async (req, res) => {
 app.get("/api/schedule", async (req, res) => {
   try {
     const phase = req.query.phase;
-    const weekParam = req.query.week ? Number(req.query.week) : null;
+    const parsedWeek = req.query.week ? Number(req.query.week) : null;
+    const weekParam = Number.isFinite(parsedWeek) ? parsedWeek : null;
     const sportsDataSchedule = await fetchSportsDataSchedule(phase, weekParam);
     if (sportsDataSchedule) {
       return res.json(sportsDataSchedule);
@@ -128,15 +135,21 @@ app.get("/api/schedule", async (req, res) => {
     }
 
     const data = await r.json();
-    const season = data?.season?.year ?? null;
+    const season = data?.season?.year ?? getDefaultSeason();
     const week = data?.week?.number ?? null;
     const seasonTypeId = data?.season?.type?.id ?? null;
+    const requestedSeasonTypeId =
+      phase === "postseason" ? 3 : phase === "regular" ? 2 : seasonTypeId;
+    const requestedWeek =
+      typeof weekParam === "number" ? weekParam : week ?? null;
 
     let scheduleData = data;
 
-    if (season && week) {
-      const seasonTypeParam = seasonTypeId ? `&seasontype=${seasonTypeId}` : "";
-      const weekUrl = `${baseUrl}?season=${season}${seasonTypeParam}&week=${week}`;
+    if (season && typeof requestedWeek === "number") {
+      const seasonTypeParam = requestedSeasonTypeId
+        ? `&seasontype=${requestedSeasonTypeId}`
+        : "";
+      const weekUrl = `${baseUrl}?season=${season}${seasonTypeParam}&week=${requestedWeek}`;
       const weekResponse = await fetch(weekUrl, {
         headers: {
           "accept": "application/json, text/plain, */*",
@@ -149,13 +162,29 @@ app.get("/api/schedule", async (req, res) => {
       }
     }
 
-    const events = Array.isArray(scheduleData?.events)
-      ? scheduleData.events
+    const normalizedSchedule = scheduleData?.content?.events
+      ? scheduleData.content
+      : scheduleData;
+    const events = Array.isArray(normalizedSchedule?.events)
+      ? normalizedSchedule.events
       : [];
 
-    const weekLabel = scheduleData?.week?.text ?? null;
-    const seasonType = scheduleData?.season?.type?.id ?? seasonTypeId ?? null;
-    const weekNumber = scheduleData?.week?.number ?? week ?? null;
+    let weekLabel = normalizedSchedule?.week?.text ?? null;
+    const seasonType =
+      normalizedSchedule?.season?.type?.id ??
+      requestedSeasonTypeId ??
+      seasonTypeId ??
+      null;
+    const weekNumber =
+      normalizedSchedule?.week?.number ??
+      requestedWeek ??
+      week ??
+      null;
+
+    if (phase && phase !== "current" && typeof requestedWeek === "number") {
+      weekLabel =
+        phase === "postseason" ? weekLabel : `Week ${requestedWeek}`;
+    }
     const roundPoints = getRoundPoints(weekLabel, seasonType, weekNumber);
 
     const games = events
@@ -208,7 +237,7 @@ app.get("/api/schedule", async (req, res) => {
       .filter(Boolean);
 
     return res.json({
-      season: scheduleData?.season?.year ?? season ?? null,
+      season: normalizedSchedule?.season?.year ?? season ?? null,
       week: weekNumber,
       weekLabel,
       seasonType,
@@ -616,6 +645,9 @@ async function fetchScoreboardData(season, week) {
 
     if (r.ok && data && Array.isArray(data?.events)) {
       return { data, attempts };
+    }
+    if (r.ok && data?.content && Array.isArray(data?.content?.events)) {
+      return { data: data.content, attempts };
     }
   }
 
