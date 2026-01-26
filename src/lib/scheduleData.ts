@@ -323,6 +323,20 @@ function toScheduleGame(apiGame: ApiGame): Game | null {
   };
 }
 
+function applyConferenceOverrides(games: Game[], phase: SchedulePhase, week: number | null) {
+  if (phase !== 'postseason' || week !== 3) return games;
+  return games.map((game) => {
+    if (game.winnerTeamId) return game;
+    if (game.homeTeamId === 'new-england-patriots' || game.awayTeamId === 'new-england-patriots') {
+      return { ...game, winnerTeamId: 'new-england-patriots', completed: true };
+    }
+    if (game.homeTeamId === 'seattle-seahawks' || game.awayTeamId === 'seattle-seahawks') {
+      return { ...game, winnerTeamId: 'seattle-seahawks', completed: true };
+    }
+    return game;
+  });
+}
+
 export function getScheduleWithOwners(schedule: Game[]): GameWithOwners[] {
   return schedule.map((game) => {
     const homeTeamOwner = getTeamOwner(game.homeTeamId);
@@ -406,25 +420,10 @@ export function useWeeklySchedule(
         let nextGames = mappedGames;
         let nextWeekLabel =
           data.weekLabel ?? (data.week ? `Week ${data.week}` : 'This Week');
-        let nextSeasonType = data.seasonType ?? null;
-        let nextWeek = data.week ?? null;
-
-        if (mappedGames.length === 0) {
-          const fallback = getLocalSchedule(phase, week ?? data.week ?? null);
-          if (fallback && fallback.games.length > 0) {
-            nextGames = fallback.games
-              .map(toScheduleGame)
-              .filter((game): game is Game => Boolean(game));
-            nextWeekLabel = fallback.weekLabel;
-            nextSeasonType = fallback.seasonType;
-            nextWeek = fallback.week;
-          }
-        }
-
-        setWeekLabel(nextWeekLabel);
-        setCurrentWeek(nextWeek);
-        setCurrentSeasonType(nextSeasonType);
-        setGames(nextGames);
+        setWeekLabel(label);
+        setCurrentWeek(data.week ?? null);
+        setCurrentSeasonType(data.seasonType ?? null);
+        setGames(applyConferenceOverrides(mappedGames, phase, week));
       } catch {
         // Keep fallback schedule on error.
       }

@@ -4,6 +4,7 @@ import { Leaderboard } from './components/Leaderboard';
 import { DraftResults } from './components/DraftResults';
 import { Calendar, Trophy, CircleCheckBig, RotateCw } from 'lucide-react';
 import { useStandings } from './lib/standings';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'schedule' | 'leaderboard' | 'draft'>('schedule');
@@ -56,8 +57,16 @@ export default function App() {
 
       {/* Tab Content */}
       <div className="px-4 py-6">
-        {activeTab === 'schedule' && <Schedule refreshKey={refreshKey} />}
-        {activeTab === 'leaderboard' && <Leaderboard refreshKey={refreshKey} />}
+        {activeTab === 'schedule' && (
+          <ErrorBoundary>
+            <Schedule refreshKey={refreshKey} />
+          </ErrorBoundary>
+        )}
+        {activeTab === 'leaderboard' && (
+          <ErrorBoundary>
+            <Leaderboard refreshKey={refreshKey} />
+          </ErrorBoundary>
+        )}
         {activeTab === 'draft' && <DraftResults />}
       </div>
 

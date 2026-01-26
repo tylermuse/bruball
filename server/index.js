@@ -45,12 +45,6 @@ function getDefaultSeason() {
   return month < 8 ? now.getFullYear() - 1 : now.getFullYear();
 }
 
-function getDefaultSeason() {
-  const now = new Date();
-  const month = now.getMonth() + 1;
-  return month < 8 ? now.getFullYear() - 1 : now.getFullYear();
-}
-
 app.get("/api/ping", (req, res) => {
   res.json({
     ok: true,
