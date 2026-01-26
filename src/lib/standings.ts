@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { getTeamById, type Team } from '../data/teams';
+import { getTeamById, normalizeTeamName, type Team } from '../data/teams';
 import type { Player, TeamRecord } from './gameData';
 
 export interface TeamStanding {
@@ -31,7 +31,7 @@ function getNext7amUtcDelayMs() {
   return next.getTime() - now.getTime();
 }
 
-export function useStandings() {
+export function useStandings(refreshKey?: number) {
   const [standings, setStandings] = useState<StandingsMap | null>(null);
   const [season, setSeason] = useState<number | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
@@ -77,7 +77,7 @@ export function useStandings() {
         clearInterval(handle);
       });
     };
-  }, []);
+  }, [refreshKey]);
 
   return { standings, season, updatedAt, error };
 }
@@ -96,7 +96,21 @@ export interface PlayoffResponse {
   wildcardByes: Record<string, boolean>;
 }
 
-export function usePlayoffs() {
+function getNormalizedEntry<T>(
+  map: Record<string, T> | null | undefined,
+  teamName: string,
+): T | null {
+  if (!map) return null;
+  const direct = map[teamName];
+  if (direct !== undefined) return direct;
+  const normalizedTarget = normalizeTeamName(teamName);
+  const matched = Object.entries(map).find(([name]) => {
+    return normalizeTeamName(name) === normalizedTarget;
+  });
+  return matched?.[1] ?? null;
+}
+
+export function usePlayoffs(refreshKey?: number) {
   const [playoffs, setPlayoffs] = useState<PlayoffResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -137,7 +151,7 @@ export function usePlayoffs() {
         clearInterval(handle);
       });
     };
-  }, []);
+  }, [refreshKey]);
 
   return { playoffs, error };
 }
@@ -149,7 +163,13 @@ export function getStandingForTeam(
   if (!standings) return null;
   const teamInfo = getTeamById(teamId);
   if (!teamInfo) return null;
-  return standings[teamInfo.name] ?? null;
+  const direct = standings[teamInfo.name];
+  if (direct) return direct;
+  const normalizedTarget = normalizeTeamName(teamInfo.name);
+  const matchedEntry = Object.entries(standings).find(([name]) => {
+    return normalizeTeamName(name) === normalizedTarget;
+  });
+  return matchedEntry?.[1] ?? null;
 }
 
 export function resolveTeamRecord(
@@ -180,8 +200,8 @@ export function getTeamPlayoffPoints(
   if (!playoffs) return 0;
   const teamInfo = getTeamById(teamId);
   if (!teamInfo) return 0;
-  const playoffWins = playoffs.playoffWins?.[teamInfo.name];
-  const wildcardBye = playoffs.wildcardByes?.[teamInfo.name];
+  const playoffWins = getNormalizedEntry(playoffs.playoffWins, teamInfo.name);
+  const wildcardBye = getNormalizedEntry(playoffs.wildcardByes, teamInfo.name);
 
   return (
     (playoffWins?.wildCard ?? 0) * PLAYOFF_POINTS.wildCardWin +
