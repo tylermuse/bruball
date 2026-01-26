@@ -3,6 +3,47 @@ import express from "express";
 const app = express();
 const PORT = process.env.PORT || 5050;
 const SERVER_VERSION = "standings-debug-v3";
+const MANUAL_CONFERENCE_WINNERS = ["New England Patriots", "Seattle Seahawks"];
+
+function applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel) {
+  const isConferenceRound =
+    seasonType === 3 &&
+    (weekNumber === 3 ||
+      String(weekLabel || "").toLowerCase().includes("conference"));
+  if (!isConferenceRound) return games;
+
+  return games.map((game) => {
+    if (game.winnerName) return game;
+    const winner = MANUAL_CONFERENCE_WINNERS.find((team) => {
+      return team === game.homeTeamName || team === game.awayTeamName;
+    });
+    if (!winner) return game;
+    return { ...game, winnerName: winner, completed: true };
+  });
+}
+
+function applyManualPlayoffOverrides(playoffWins) {
+  const next = { ...(playoffWins ?? {}) };
+  MANUAL_CONFERENCE_WINNERS.forEach((teamName) => {
+    const current = next[teamName] ?? {
+      wildCard: 0,
+      divisional: 0,
+      conference: 0,
+      superBowl: 0,
+    };
+    next[teamName] = {
+      ...current,
+      conference: Math.max(current.conference ?? 0, 1),
+    };
+  });
+  return next;
+}
+
+function getDefaultSeason() {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  return month < 8 ? now.getFullYear() - 1 : now.getFullYear();
+}
 
 function getDefaultSeason() {
   const now = new Date();
@@ -21,6 +62,7 @@ app.get("/api/ping", (req, res) => {
 
 app.get("/api/standings", async (req, res) => {
   try {
+    res.set("Cache-Control", "no-store");
     const now = new Date();
     const month = now.getMonth() + 1; // 1–12
     const defaultSeason =
@@ -112,12 +154,21 @@ app.get("/api/standings", async (req, res) => {
 
 app.get("/api/schedule", async (req, res) => {
   try {
+    res.set("Cache-Control", "no-store");
     const phase = req.query.phase;
     const parsedWeek = req.query.week ? Number(req.query.week) : null;
     const weekParam = Number.isFinite(parsedWeek) ? parsedWeek : null;
     const sportsDataSchedule = await fetchSportsDataSchedule(phase, weekParam);
     if (sportsDataSchedule) {
-      return res.json(sportsDataSchedule);
+      return res.json({
+        ...sportsDataSchedule,
+        games: applyManualConferenceWinners(
+          sportsDataSchedule.games,
+          sportsDataSchedule.seasonType,
+          sportsDataSchedule.week,
+          sportsDataSchedule.weekLabel,
+        ),
+      });
     }
 
     const baseUrl =
@@ -241,7 +292,7 @@ app.get("/api/schedule", async (req, res) => {
       week: weekNumber,
       weekLabel,
       seasonType,
-      games,
+      games: applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel),
     });
   } catch (err) {
     console.error(err);
@@ -251,6 +302,7 @@ app.get("/api/schedule", async (req, res) => {
 
 app.get("/api/playoffs", async (req, res) => {
   try {
+    res.set("Cache-Control", "no-store");
     const now = new Date();
     const month = now.getMonth() + 1; // 1–12
     const defaultSeason =
@@ -303,7 +355,7 @@ app.get("/api/playoffs", async (req, res) => {
           week: round.week,
           points: round.points,
         })),
-        playoffWins: sportsData.playoffWins,
+        playoffWins: applyManualPlayoffOverrides(sportsData.playoffWins),
         wildcardByes: sportsData.wildcardByes,
       });
     }
@@ -392,7 +444,7 @@ app.get("/api/playoffs", async (req, res) => {
         week: round.week,
         points: round.points,
       })),
-      playoffWins,
+      playoffWins: applyManualPlayoffOverrides(playoffWins),
       wildcardByes,
     });
   } catch (err) {
