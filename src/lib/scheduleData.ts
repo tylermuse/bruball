@@ -112,6 +112,58 @@ function toScheduleGame(apiGame: ApiGame): Game | null {
   };
 }
 
+function applyConferenceOverrides(
+  games: Game[],
+  seasonType: number | null,
+  week: number | null,
+  weekLabel: string | null,
+  selectedWeek: number | null,
+  phase: SchedulePhase,
+) {
+  const isConferenceRound =
+    (seasonType === 3 || phase === 'postseason') &&
+    (week === 3 ||
+      selectedWeek === 3 ||
+      Boolean(weekLabel?.toLowerCase().includes('conference')));
+  if (!isConferenceRound) return games;
+  return games.map((game) => {
+    if (game.winnerTeamId) return game;
+    if (game.homeTeamId === 'new-england-patriots' || game.awayTeamId === 'new-england-patriots') {
+      return { ...game, winnerTeamId: 'new-england-patriots', completed: true };
+    }
+    if (game.homeTeamId === 'seattle-seahawks' || game.awayTeamId === 'seattle-seahawks') {
+      return { ...game, winnerTeamId: 'seattle-seahawks', completed: true };
+    }
+    return game;
+  });
+}
+
+function applySuperBowlOverride(
+  games: Game[],
+  seasonType: number | null,
+  week: number | null,
+  weekLabel: string | null,
+  selectedWeek: number | null,
+  phase: SchedulePhase,
+) {
+  const isSuperBowl =
+    (seasonType === 3 || phase === 'postseason') &&
+    (week === 4 ||
+      selectedWeek === 4 ||
+      Boolean(weekLabel?.toLowerCase().includes('super bowl')));
+  if (!isSuperBowl) return games;
+  if (games.length === 0) return games;
+
+  const [firstGame, ...rest] = games;
+  const updatedGame: Game = {
+    ...firstGame,
+    homeTeamId: 'new-england-patriots',
+    awayTeamId: 'seattle-seahawks',
+  };
+
+  return [updatedGame, ...rest.filter(() => false)];
+}
+
 export function getScheduleWithOwners(schedule: Game[]): GameWithOwners[] {
   return schedule.map((game) => {
     const homeTeamOwner = getTeamOwner(game.homeTeamId);
@@ -130,7 +182,11 @@ export function getScheduleWithOwners(schedule: Game[]): GameWithOwners[] {
 
 export type SchedulePhase = 'current' | 'regular' | 'postseason';
 
-export function useWeeklySchedule(phase: SchedulePhase, week: number | null) {
+export function useWeeklySchedule(
+  phase: SchedulePhase,
+  week: number | null,
+  refreshKey?: number,
+) {
   const [games, setGames] = useState<Game[]>(weeklySchedule);
   const [weekLabel, setWeekLabel] = useState<string | null>('Week 15 Schedule');
   const [currentWeek, setCurrentWeek] = useState<number | null>(null);
@@ -145,11 +201,14 @@ export function useWeeklySchedule(phase: SchedulePhase, week: number | null) {
         if (phase && phase !== 'current') {
           params.set('phase', phase);
         }
-        if (week) {
+        if (week !== null) {
           params.set('week', String(week));
         }
+        if (refreshKey) {
+          params.set('t', String(refreshKey));
+        }
         const url = params.toString() ? `/api/schedule?${params.toString()}` : '/api/schedule';
-        const response = await fetch(url);
+        const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) return;
         const data = (await response.json()) as ScheduleResponse;
         if (!active) return;
@@ -163,7 +222,23 @@ export function useWeeklySchedule(phase: SchedulePhase, week: number | null) {
         setWeekLabel(label);
         setCurrentWeek(data.week ?? null);
         setCurrentSeasonType(data.seasonType ?? null);
-        setGames(mappedGames);
+        setGames(
+          applySuperBowlOverride(
+            applyConferenceOverrides(
+              mappedGames,
+              data.seasonType ?? null,
+              data.week ?? null,
+              data.weekLabel ?? null,
+              week,
+              phase,
+            ),
+            data.seasonType ?? null,
+            data.week ?? null,
+            data.weekLabel ?? null,
+            week,
+            phase,
+          ),
+        );
       } catch {
         // Keep fallback schedule on error.
       }
@@ -173,7 +248,7 @@ export function useWeeklySchedule(phase: SchedulePhase, week: number | null) {
     return () => {
       active = false;
     };
-  }, [phase, week]);
+  }, [phase, week, refreshKey]);
 
   return { games, weekLabel, currentWeek, currentSeasonType };
 }
