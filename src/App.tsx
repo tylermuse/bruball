@@ -58,12 +58,12 @@ export default function App() {
       {/* Tab Content */}
       <div className="px-4 py-6">
         {activeTab === 'schedule' && (
-          <ErrorBoundary>
+          <ErrorBoundary resetKey={`${activeTab}-${refreshKey}`}>
             <Schedule refreshKey={refreshKey} />
           </ErrorBoundary>
         )}
         {activeTab === 'leaderboard' && (
-          <ErrorBoundary>
+          <ErrorBoundary resetKey={`${activeTab}-${refreshKey}`}>
             <Leaderboard refreshKey={refreshKey} />
           </ErrorBoundary>
         )}

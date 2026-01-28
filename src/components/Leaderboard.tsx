@@ -3,6 +3,7 @@ import { Medal, Crown } from 'lucide-react';
 import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById } from '../data/teams';
 import { getPlayerPoints, getTeamPoints, resolveTeamRecord, usePlayoffs, useStandings } from '../lib/standings';
+import { useMemo } from 'react';
 
 type LeaderboardProps = {
   refreshKey?: number;
@@ -11,12 +12,26 @@ type LeaderboardProps = {
 export function Leaderboard({ refreshKey }: LeaderboardProps) {
   const { standings } = useStandings(refreshKey);
   const { playoffs } = usePlayoffs(refreshKey);
-  const players = getAllPlayers()
-    .map((player) => ({
-      ...player,
-      livePoints: getPlayerPoints(player, standings, playoffs),
-    }))
-    .sort((a, b) => b.livePoints - a.livePoints);
+  const { players, playerError } = useMemo(() => {
+    try {
+      const allPlayers = getAllPlayers();
+      const safePlayers = Array.isArray(allPlayers) ? allPlayers : [];
+      const nextPlayers = safePlayers
+        .map((player) => ({
+          ...player,
+          teams: Array.isArray(player.teams) ? player.teams : [],
+          livePoints: getPlayerPoints(player, standings, playoffs),
+        }))
+        .sort((a, b) => b.livePoints - a.livePoints);
+      return { players: nextPlayers, playerError: null };
+    } catch (error) {
+      return {
+        players: [],
+        playerError:
+          error instanceof Error ? error.message : 'Failed to load leaderboard data.',
+      };
+    }
+  }, [standings, playoffs]);
 
   const getMedalIcon = (rank: number) => {
     if (rank === 1) return <Crown className="size-5 text-yellow-500" />;
@@ -35,7 +50,12 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
 
       {/* Leaderboard */}
       <div className="space-y-3">
-        {players.map((player, index) => {
+        {playerError && (
+          <div className="rounded-lg p-4 shadow-sm bg-white border border-gray-200 text-sm text-gray-600">
+            {playerError}
+          </div>
+        )}
+        {!playerError && players.map((player, index) => {
           const rank = index + 1;
 
           return (

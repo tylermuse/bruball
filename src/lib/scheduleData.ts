@@ -323,8 +323,20 @@ function toScheduleGame(apiGame: ApiGame): Game | null {
   };
 }
 
-function applyConferenceOverrides(games: Game[], phase: SchedulePhase, week: number | null) {
-  if (phase !== 'postseason' || week !== 3) return games;
+function applyConferenceOverrides(
+  games: Game[],
+  seasonType: number | null,
+  week: number | null,
+  weekLabel: string | null,
+  selectedWeek: number | null,
+  phase: SchedulePhase,
+) {
+  const isConferenceRound =
+    (seasonType === 3 || phase === 'postseason') &&
+    (week === 3 ||
+      selectedWeek === 3 ||
+      Boolean(weekLabel?.toLowerCase().includes('conference')));
+  if (!isConferenceRound) return games;
   return games.map((game) => {
     if (game.winnerTeamId) return game;
     if (game.homeTeamId === 'new-england-patriots' || game.awayTeamId === 'new-england-patriots') {
@@ -407,8 +419,11 @@ export function useWeeklySchedule(
         if (week !== null) {
           params.set('week', String(week));
         }
+        if (refreshKey) {
+          params.set('t', String(refreshKey));
+        }
         const url = params.toString() ? `/api/schedule?${params.toString()}` : '/api/schedule';
-        const response = await fetch(url);
+        const response = await fetch(url, { cache: 'no-store' });
         if (!response.ok) return;
         const data = (await response.json()) as ScheduleResponse;
         if (!active) return;
@@ -423,7 +438,16 @@ export function useWeeklySchedule(
         setWeekLabel(label);
         setCurrentWeek(data.week ?? null);
         setCurrentSeasonType(data.seasonType ?? null);
-        setGames(applyConferenceOverrides(mappedGames, phase, week));
+        setGames(
+          applyConferenceOverrides(
+            mappedGames,
+            data.seasonType ?? null,
+            data.week ?? null,
+            data.weekLabel ?? null,
+            week,
+            phase,
+          ),
+        );
       } catch {
         // Keep fallback schedule on error.
       }
