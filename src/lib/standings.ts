@@ -220,8 +220,8 @@ export function getTeamPlayoffPoints(
 ) {
   const teamInfo = getTeamById(teamId);
   if (!teamInfo) return 0;
-  const playoffWins = getNormalizedEntry(playoffs.playoffWins, teamInfo.name);
-  const wildcardBye = getNormalizedEntry(playoffs.wildcardByes, teamInfo.name);
+  const playoffWins = getNormalizedEntry(playoffs?.playoffWins ?? null, teamInfo.name);
+  const wildcardBye = getNormalizedEntry(playoffs?.wildcardByes ?? null, teamInfo.name);
 
   return (
     (playoffWins?.wildCard ?? 0) * PLAYOFF_POINTS.wildCardWin +
@@ -239,9 +239,8 @@ export function getTeamPoints(
 ) {
   const standing = getStandingForTeam(teamId, standings);
   const regularWins = standing?.wins ?? 0;
-  const regularTies = standing?.ties ?? 0;
-  const regularPoints = regularWins + regularTies * 0.5;
-  return regularPoints + getTeamPlayoffPoints(teamId, playoffs);
+  if (!playoffs) return regularWins;
+  return regularWins + getTeamPlayoffPoints(teamId, playoffs);
 }
 
 export function getPlayerPoints(

@@ -18,6 +18,29 @@ export function Schedule({ refreshKey }: ScheduleProps) {
     refreshKey,
   );
   const schedule = getScheduleWithOwners(games);
+  const isConferenceRound =
+    phase === 'postseason' &&
+    (selectedWeek === 3 || Boolean(weekLabel?.toLowerCase().includes('conference')));
+  const resolvedSchedule = useMemo(
+    () =>
+      schedule.map((game) => {
+        if (game.winnerTeamId || !isConferenceRound) return game;
+        if (
+          game.homeTeamId === 'new-england-patriots' ||
+          game.awayTeamId === 'new-england-patriots'
+        ) {
+          return { ...game, winnerTeamId: 'new-england-patriots', completed: true };
+        }
+        if (
+          game.homeTeamId === 'seattle-seahawks' ||
+          game.awayTeamId === 'seattle-seahawks'
+        ) {
+          return { ...game, winnerTeamId: 'seattle-seahawks', completed: true };
+        }
+        return game;
+      }),
+    [schedule, isConferenceRound],
+  );
 
   const options = useMemo(() => {
     const weeks = Array.from({ length: 18 }, (_, index) => ({
@@ -74,7 +97,7 @@ export function Schedule({ refreshKey }: ScheduleProps) {
   };
   
   // Group games by day
-  const gamesByDay = schedule.reduce((acc, game) => {
+  const gamesByDay = resolvedSchedule.reduce((acc, game) => {
     if (!acc[game.day]) {
       acc[game.day] = [];
     }
@@ -152,9 +175,12 @@ export function Schedule({ refreshKey }: ScheduleProps) {
               {games.map(game => {
                 const awayTeam = getTeamById(game.awayTeamId);
                 const homeTeam = getTeamById(game.homeTeamId);
-                const winnerTeam = game.winnerTeamId ? getTeamById(game.winnerTeamId) : null;
-                const awayIsWinner = game.winnerTeamId === game.awayTeamId;
-                const homeIsWinner = game.winnerTeamId === game.homeTeamId;
+                const resolvedWinnerTeamId = game.winnerTeamId;
+                const winnerTeam = resolvedWinnerTeamId
+                  ? getTeamById(resolvedWinnerTeamId)
+                  : null;
+                const awayIsWinner = resolvedWinnerTeamId === game.awayTeamId;
+                const homeIsWinner = resolvedWinnerTeamId === game.homeTeamId;
 
                 if (!awayTeam || !homeTeam) {
                   return null;
@@ -218,7 +244,7 @@ export function Schedule({ refreshKey }: ScheduleProps) {
                     </div>
                     
                     {/* Points at Stake */}
-                    {game.pointsAtStake > 0 && !game.completed && (
+                    {game.pointsAtStake > 0 && !game.completed && !resolvedWinnerTeamId && (
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <div className="text-xs text-gray-600">
                           <span className="font-medium text-fuchsia-600">{game.pointsAtStake} points</span> at stake for the winner
