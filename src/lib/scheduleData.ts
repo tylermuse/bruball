@@ -349,6 +349,32 @@ function applyConferenceOverrides(
   });
 }
 
+function applySuperBowlOverride(
+  games: Game[],
+  seasonType: number | null,
+  week: number | null,
+  weekLabel: string | null,
+  selectedWeek: number | null,
+  phase: SchedulePhase,
+) {
+  const isSuperBowl =
+    (seasonType === 3 || phase === 'postseason') &&
+    (week === 4 ||
+      selectedWeek === 4 ||
+      Boolean(weekLabel?.toLowerCase().includes('super bowl')));
+  if (!isSuperBowl) return games;
+  if (games.length === 0) return games;
+
+  const [firstGame, ...rest] = games;
+  const updatedGame: Game = {
+    ...firstGame,
+    homeTeamId: 'new-england-patriots',
+    awayTeamId: 'seattle-seahawks',
+  };
+
+  return [updatedGame, ...rest.filter(() => false)];
+}
+
 export function getScheduleWithOwners(schedule: Game[]): GameWithOwners[] {
   return schedule.map((game) => {
     const homeTeamOwner = getTeamOwner(game.homeTeamId);
@@ -439,8 +465,15 @@ export function useWeeklySchedule(
         setCurrentWeek(data.week ?? null);
         setCurrentSeasonType(data.seasonType ?? null);
         setGames(
-          applyConferenceOverrides(
-            mappedGames,
+          applySuperBowlOverride(
+            applyConferenceOverrides(
+              mappedGames,
+              data.seasonType ?? null,
+              data.week ?? null,
+              data.weekLabel ?? null,
+              week,
+              phase,
+            ),
             data.seasonType ?? null,
             data.week ?? null,
             data.weekLabel ?? null,
