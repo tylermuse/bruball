@@ -6,6 +6,7 @@ import {
   applyManualConferenceWinners,
   applyManualPlayoffOverrides,
   applyManualSuperBowlWinner,
+  applyManualTies,
   getManualPostseasonSchedule,
 } from "./manualOverrides.js";
 
@@ -46,7 +47,7 @@ app.get("/api/standings", async (req, res) => {
         return res.json({
           season: Number(season),
           updatedAt: new Date().toISOString(),
-          teams: mapSportsDataStandings(sportsDataStandings),
+          teams: applyManualTies(mapSportsDataStandings(sportsDataStandings)),
         });
       }
     }
@@ -115,7 +116,7 @@ app.get("/api/standings", async (req, res) => {
       if (req.query.inspect) {
         return res.json(summarizeStandingsShape(goodData));
       }
-      const teams = extractStandings(goodData);
+      const teams = applyManualTies(extractStandings(goodData));
       return res.json({
         season: Number(season),
         updatedAt: new Date().toISOString(),

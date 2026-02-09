@@ -1,5 +1,7 @@
 const MANUAL_CONFERENCE_WINNERS = ['New England Patriots', 'Seattle Seahawks'];
 const MANUAL_SUPER_BOWL_WINNER = 'Seattle Seahawks';
+const MANUAL_WILDCARD_WINNERS = ['Chicago Bears'];
+const MANUAL_TIE_TEAMS = ['Dallas Cowboys', 'Green Bay Packers'];
 
 function applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel) {
   const isConferenceRound =
@@ -39,6 +41,19 @@ function applyManualSuperBowlWinner(games, seasonType, weekNumber, weekLabel) {
 function applyManualPlayoffOverrides(playoffWins, wildcardByes) {
   const nextWins = { ...(playoffWins ?? {}) };
   const nextByes = { ...(wildcardByes ?? {}) };
+
+  MANUAL_WILDCARD_WINNERS.forEach((teamName) => {
+    const current = nextWins[teamName] ?? {
+      wildCard: 0,
+      divisional: 0,
+      conference: 0,
+      superBowl: 0,
+    };
+    nextWins[teamName] = {
+      ...current,
+      wildCard: Math.max(current.wildCard ?? 0, 1),
+    };
+  });
 
   MANUAL_CONFERENCE_WINNERS.forEach((teamName) => {
     const current = nextWins[teamName] ?? {
@@ -112,9 +127,23 @@ function getManualPostseasonSchedule(week) {
   return null;
 }
 
+function applyManualTies(teams) {
+  const nextTeams = { ...teams };
+  MANUAL_TIE_TEAMS.forEach((teamName) => {
+    if (nextTeams[teamName]) {
+      nextTeams[teamName] = {
+        ...nextTeams[teamName],
+        ties: (nextTeams[teamName].ties ?? 0) + 1,
+      };
+    }
+  });
+  return nextTeams;
+}
+
 module.exports = {
   applyManualConferenceWinners,
   applyManualPlayoffOverrides,
   applyManualSuperBowlWinner,
+  applyManualTies,
   getManualPostseasonSchedule,
 };
