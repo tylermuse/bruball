@@ -1,6 +1,17 @@
 const MANUAL_CONFERENCE_WINNERS = ['New England Patriots', 'Seattle Seahawks'];
 const MANUAL_SUPER_BOWL_WINNER = 'Seattle Seahawks';
-const MANUAL_WILDCARD_WINNERS = ['Chicago Bears'];
+const MANUAL_WILDCARD_WINNERS = [
+  'Chicago Bears',
+  'Los Angeles Rams',
+  'Buffalo Bills',
+  'San Francisco 49ers',
+  'New England Patriots', // Beat LA Chargers in WC
+  'Houston Texans',
+];
+const MANUAL_DIVISIONAL_WINNERS = [
+  'Los Angeles Rams', // Beat Chicago Bears
+  'Denver Broncos', // Beat Buffalo Bills (Denver had bye)
+];
 const MANUAL_TIE_TEAMS = ['Dallas Cowboys', 'Green Bay Packers'];
 
 function applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel) {
@@ -53,6 +64,23 @@ function applyManualPlayoffOverrides(playoffWins, wildcardByes) {
       ...current,
       wildCard: Math.max(current.wildCard ?? 0, 1),
     };
+  });
+
+  MANUAL_DIVISIONAL_WINNERS.forEach((teamName) => {
+    const current = nextWins[teamName] ?? {
+      wildCard: 0,
+      divisional: 0,
+      conference: 0,
+      superBowl: 0,
+    };
+    nextWins[teamName] = {
+      ...current,
+      divisional: Math.max(current.divisional ?? 0, 1),
+    };
+    // Denver had a bye, Rams did not
+    if (teamName === 'Denver Broncos') {
+      nextByes[teamName] = true;
+    }
   });
 
   MANUAL_CONFERENCE_WINNERS.forEach((teamName) => {
