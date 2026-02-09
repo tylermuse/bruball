@@ -1,0 +1,56 @@
+import { describe, expect, it } from "vitest";
+import {
+  applyManualConferenceWinners,
+  applyManualPlayoffOverrides,
+  applyManualSuperBowlWinner,
+  getManualPostseasonSchedule,
+} from "./manualOverrides.js";
+
+describe("manualOverrides", () => {
+  it("sets conference winners when missing", () => {
+    const games = [
+      {
+        homeTeamName: "New England Patriots",
+        awayTeamName: "Denver Broncos",
+        winnerName: null,
+        completed: false,
+      },
+    ];
+    const updated = applyManualConferenceWinners(games, 3, 3, "Conference Round");
+    expect(updated[0].winnerName).toBe("New England Patriots");
+    expect(updated[0].completed).toBe(true);
+  });
+
+  it("sets Super Bowl winner when missing", () => {
+    const games = [
+      {
+        homeTeamName: "New England Patriots",
+        awayTeamName: "Seattle Seahawks",
+        winnerName: null,
+        completed: false,
+      },
+    ];
+    const updated = applyManualSuperBowlWinner(games, 3, 4, "Super Bowl");
+    expect(updated[0].winnerName).toBe("Seattle Seahawks");
+    expect(updated[0].completed).toBe(true);
+  });
+
+  it("adds manual winners to playoff wins", () => {
+    const updated = applyManualPlayoffOverrides({});
+    expect(updated["New England Patriots"].conference).toBe(1);
+    expect(updated["Seattle Seahawks"].conference).toBe(1);
+    expect(updated["Seattle Seahawks"].superBowl).toBe(1);
+  });
+
+  it("returns manual conference schedule for week 3", () => {
+    const games = getManualPostseasonSchedule(3);
+    expect(games?.length).toBe(2);
+    expect(games?.[0].pointsAtStake).toBe(3.5);
+  });
+
+  it("returns manual super bowl schedule for week 4", () => {
+    const games = getManualPostseasonSchedule(4);
+    expect(games?.length).toBe(1);
+    expect(games?.[0].pointsAtStake).toBe(5);
+  });
+});

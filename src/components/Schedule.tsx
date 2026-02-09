@@ -18,29 +18,6 @@ export function Schedule({ refreshKey }: ScheduleProps) {
     refreshKey,
   );
   const schedule = getScheduleWithOwners(games);
-  const isConferenceRound =
-    phase === 'postseason' &&
-    (selectedWeek === 3 || Boolean(weekLabel?.toLowerCase().includes('conference')));
-  const resolvedSchedule = useMemo(
-    () =>
-      schedule.map((game) => {
-        if (game.winnerTeamId || !isConferenceRound) return game;
-        if (
-          game.homeTeamId === 'new-england-patriots' ||
-          game.awayTeamId === 'new-england-patriots'
-        ) {
-          return { ...game, winnerTeamId: 'new-england-patriots', completed: true };
-        }
-        if (
-          game.homeTeamId === 'seattle-seahawks' ||
-          game.awayTeamId === 'seattle-seahawks'
-        ) {
-          return { ...game, winnerTeamId: 'seattle-seahawks', completed: true };
-        }
-        return game;
-      }),
-    [schedule, isConferenceRound],
-  );
 
   const options = useMemo(() => {
     const weeks = Array.from({ length: 18 }, (_, index) => ({
@@ -97,7 +74,7 @@ export function Schedule({ refreshKey }: ScheduleProps) {
   };
   
   // Group games by day
-  const gamesByDay = resolvedSchedule.reduce((acc, game) => {
+  const gamesByDay = schedule.reduce((acc, game) => {
     if (!acc[game.day]) {
       acc[game.day] = [];
     }
