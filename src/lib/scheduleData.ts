@@ -374,17 +374,21 @@ export function useWeeklySchedule(
         }
 
         if (phase !== 'current' && week) {
-          const local = phase === 'regular' ? getLocalSchedule(phase, week) : null;
-          if (local && local.games.length > 0) {
-            if (!active) return;
-            const nextGames = local.games
-              .map(toScheduleGame)
-              .filter((game): game is Game => Boolean(game));
-            setWeekLabel(local.weekLabel);
-            setCurrentWeek(local.week);
-            setCurrentSeasonType(local.seasonType);
-            setGames(nextGames);
-            return;
+          // For Conference round and Super Bowl, always fetch from API to get manual overrides
+          const shouldUseApi = phase === 'postseason' && (week === 3 || week === 4);
+          if (!shouldUseApi) {
+            const local = getLocalSchedule(phase, week);
+            if (local && local.games.length > 0) {
+              if (!active) return;
+              const nextGames = local.games
+                .map(toScheduleGame)
+                .filter((game): game is Game => Boolean(game));
+              setWeekLabel(local.weekLabel);
+              setCurrentWeek(local.week);
+              setCurrentSeasonType(local.seasonType);
+              setGames(nextGames);
+              return;
+            }
           }
         }
 

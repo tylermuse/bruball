@@ -131,18 +131,6 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
         </div>
       )}
 
-      {champion && (
-        <div className="relative overflow-hidden rounded-xl border border-fuchsia-300 bg-fuchsia-50 px-5 py-4 shadow-sm">
-          <div className="flex items-center gap-3">
-            <Crown className="size-6 text-yellow-500" />
-            <div>
-              <div className="text-sm text-gray-600">Bruball Champ</div>
-              <div className="text-lg font-semibold text-gray-900">{champion.name}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Leaderboard */}
       <div className="space-y-3">
         {playerError && (
