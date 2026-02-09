@@ -11,4 +11,13 @@ describe('leaderboard cache', () => {
     const raw = buildLeaderboardCache({ tyler: 10 }, '2026-02-08T00:00:00.000Z');
     expect(readLeaderboardCache(raw, '2026-02-08T00:00:00.000Z')).toEqual({ tyler: 10 });
   });
+
+  it('returns null when cache version is stale', () => {
+    const stale = JSON.stringify({
+      totals: { tyler: 10 },
+      updatedAt: '2026-02-08T00:00:00.000Z',
+      version: 1,
+    });
+    expect(readLeaderboardCache(stale, '2026-02-08T00:00:00.000Z')).toBeNull();
+  });
 });
