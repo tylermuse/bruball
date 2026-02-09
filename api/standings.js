@@ -1,4 +1,5 @@
 const { extractStandings, fetchEspnStandings, getDefaultSeason } = require('./_lib/standings');
+const { applyManualTies } = require('./_lib/manualOverrides');
 
 module.exports = async (req, res) => {
   try {
@@ -9,7 +10,7 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const teams = extractStandings(data);
+    const teams = applyManualTies(extractStandings(data));
     res.json({
       season: Number(season),
       updatedAt: new Date().toISOString(),
