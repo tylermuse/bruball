@@ -357,6 +357,8 @@ app.get("/api/playoffs", async (req, res) => {
     const sportsData = await fetchSportsDataPlayoffs(season);
     if (sportsData && hasPlayoffResults(sportsData.playoffWins, sportsData.wildcardByes)) {
       return res.json({
+        const overridden = applyManualPlayoffOverrides(sportsData.playoffWins, sportsData.wildcardByes);
+      return res.json({
         season: Number(season),
         updatedAt: new Date().toISOString(),
         source: "sportsdataio",
@@ -366,8 +368,8 @@ app.get("/api/playoffs", async (req, res) => {
           week: round.week,
           points: round.points,
         })),
-        playoffWins: applyManualPlayoffOverrides(sportsData.playoffWins),
-        wildcardByes: sportsData.wildcardByes,
+        playoffWins: overridden.playoffWins,
+        wildcardByes: overridden.wildcardByes,
       });
     }
 
@@ -445,7 +447,8 @@ app.get("/api/playoffs", async (req, res) => {
       }
     });
 
-    return res.json({
+    return     const overridden = applyManualPlayoffOverrides(playoffWins, wildcardByes);
+    res.json({
       season: Number(season),
       updatedAt: new Date().toISOString(),
       source: "espn-fallback",
@@ -455,8 +458,8 @@ app.get("/api/playoffs", async (req, res) => {
         week: round.week,
         points: round.points,
       })),
-      playoffWins: applyManualPlayoffOverrides(playoffWins),
-      wildcardByes,
+      playoffWins: overridden.playoffWins,
+      wildcardByes: overridden.wildcardByes,
     });
   } catch (err) {
     console.error(err);

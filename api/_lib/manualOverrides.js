@@ -36,35 +36,39 @@ function applyManualSuperBowlWinner(games, seasonType, weekNumber, weekLabel) {
   });
 }
 
-function applyManualPlayoffOverrides(playoffWins) {
-  const next = { ...(playoffWins ?? {}) };
+function applyManualPlayoffOverrides(playoffWins, wildcardByes) {
+  const nextWins = { ...(playoffWins ?? {}) };
+  const nextByes = { ...(wildcardByes ?? {}) };
+
   MANUAL_CONFERENCE_WINNERS.forEach((teamName) => {
-    const current = next[teamName] ?? {
+    const current = nextWins[teamName] ?? {
       wildCard: 0,
       divisional: 0,
       conference: 0,
       superBowl: 0,
     };
-    next[teamName] = {
+    nextWins[teamName] = {
       ...current,
+      divisional: Math.max(current.divisional ?? 0, 1),
       conference: Math.max(current.conference ?? 0, 1),
     };
+    nextByes[teamName] = true;
   });
 
   if (MANUAL_SUPER_BOWL_WINNER) {
-    const current = next[MANUAL_SUPER_BOWL_WINNER] ?? {
+    const current = nextWins[MANUAL_SUPER_BOWL_WINNER] ?? {
       wildCard: 0,
       divisional: 0,
       conference: 0,
       superBowl: 0,
     };
-    next[MANUAL_SUPER_BOWL_WINNER] = {
+    nextWins[MANUAL_SUPER_BOWL_WINNER] = {
       ...current,
       superBowl: Math.max(current.superBowl ?? 0, 1),
     };
   }
 
-  return next;
+  return { playoffWins: nextWins, wildcardByes: nextByes };
 }
 
 function getManualPostseasonSchedule(week) {
