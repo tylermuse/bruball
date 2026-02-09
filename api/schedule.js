@@ -1,5 +1,10 @@
 const { fetchSportsDataSchedule } = require('./_lib/sportsdata');
 const { getDefaultSeason } = require('./_lib/standings');
+const {
+  applyManualConferenceWinners,
+  applyManualSuperBowlWinner,
+  getManualPostseasonSchedule,
+} = require('./_lib/manualOverrides');
 
 async function fetchEspnSchedule(phase, weekParam) {
   const baseUrl = 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard';
@@ -48,13 +53,22 @@ async function fetchEspnSchedule(phase, weekParam) {
   weekLabel = normalizedSchedule?.week?.text ?? weekLabel;
 
   if (phase && phase !== 'current' && typeof requestedWeek === 'number') {
-    weekLabel = phase === 'postseason' ? weekLabel : `Week ${requestedWeek}`;
+    if (phase === 'postseason') {
+      weekLabel = postseasonLabelForWeek(requestedWeek);
+      weekNumber = requestedWeek;
+    } else {
+      weekLabel = `Week ${requestedWeek}`;
+      weekNumber = requestedWeek;
+    }
   }
 
   const events = Array.isArray(normalizedSchedule?.events)
     ? normalizedSchedule.events
     : [];
-  const roundPoints = getRoundPoints(weekLabel, seasonType, weekNumber);
+  const roundPoints =
+    phase === 'postseason' && typeof requestedWeek === 'number'
+      ? postseasonPointsForWeek(requestedWeek)
+      : getRoundPoints(weekLabel, seasonType, weekNumber);
 
   const games = events
     .map((event) => {
@@ -110,7 +124,12 @@ async function fetchEspnSchedule(phase, weekParam) {
     week: weekNumber,
     weekLabel,
     seasonType,
-    games,
+    games: applyManualSuperBowlWinner(
+      applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel),
+      seasonType,
+      weekNumber,
+      weekLabel,
+    ),
   };
 }
 
@@ -122,9 +141,29 @@ function postseasonLabelForWeek(week) {
   return `Week ${week}`;
 }
 
+function postseasonPointsForWeek(week) {
+  if (week === 1) return 1.5;
+  if (week === 2) return 2.5;
+  if (week === 3) return 3.5;
+  if (week === 4) return 5;
+  return 1;
+}
+
 function getRoundPoints(weekLabel, seasonType, weekNumber) {
   const label = (weekLabel || '').toLowerCase();
-  if (seasonType === 3 || label.includes('wild card') || label.includes('wildcard')) {
+  if (label.includes('super bowl')) {
+    return 5;
+  }
+  if (label.includes('conference')) {
+    return 3.5;
+  }
+  if (label.includes('divisional')) {
+    return 2.5;
+  }
+  if (label.includes('wild card') || label.includes('wildcard')) {
+    return 1.5;
+  }
+  if (seasonType === 3) {
     if (typeof weekNumber === 'number') {
       if (weekNumber === 1) return 1.5;
       if (weekNumber === 2) return 2.5;
@@ -132,15 +171,6 @@ function getRoundPoints(weekLabel, seasonType, weekNumber) {
       if (weekNumber === 4) return 5;
     }
     return 1.5;
-  }
-  if (label.includes('divisional')) {
-    return 2.5;
-  }
-  if (label.includes('conference')) {
-    return 3.5;
-  }
-  if (label.includes('super bowl')) {
-    return 5;
   }
   return 1;
 }
@@ -150,9 +180,35 @@ module.exports = async (req, res) => {
     const phase = req.query.phase;
     const parsedWeek = req.query.week ? Number(req.query.week) : null;
     const weekParam = Number.isFinite(parsedWeek) ? parsedWeek : null;
+    if (phase === 'postseason' && typeof weekParam === 'number') {
+      const manualGames = getManualPostseasonSchedule(weekParam);
+      if (manualGames) {
+        res.json({
+          season: getDefaultSeason(),
+          week: weekParam,
+          weekLabel: postseasonLabelForWeek(weekParam),
+          seasonType: 3,
+          games: manualGames,
+        });
+        return;
+      }
+    }
     const sportsDataSchedule = await fetchSportsDataSchedule(phase, weekParam);
     if (sportsDataSchedule) {
-      res.json(sportsDataSchedule);
+      res.json({
+        ...sportsDataSchedule,
+        games: applyManualSuperBowlWinner(
+          applyManualConferenceWinners(
+            sportsDataSchedule.games,
+            sportsDataSchedule.seasonType,
+            sportsDataSchedule.week,
+            sportsDataSchedule.weekLabel,
+          ),
+          sportsDataSchedule.seasonType,
+          sportsDataSchedule.week,
+          sportsDataSchedule.weekLabel,
+        ),
+      });
       return;
     }
 
