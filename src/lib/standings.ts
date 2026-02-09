@@ -401,8 +401,10 @@ export function getTeamPoints(
 ) {
   const standing = getStandingForTeam(teamId, standings);
   const regularWins = standing?.wins ?? 0;
-  if (!playoffs) return regularWins;
-  return regularWins + getTeamPlayoffPoints(teamId, playoffs);
+  const ties = standing?.ties ?? 0;
+  const regularSeasonPoints = regularWins + ties * 0.5;
+  if (!playoffs) return regularSeasonPoints;
+  return regularSeasonPoints + getTeamPlayoffPoints(teamId, playoffs);
 }
 
 export function getPlayerPoints(
