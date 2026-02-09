@@ -1,5 +1,6 @@
 const { fetchSportsDataPlayoffs } = require('./_lib/sportsdata');
 const { extractStandings, fetchEspnStandings, getDefaultSeason } = require('./_lib/standings');
+const { applyManualPlayoffOverrides } = require('./_lib/manualOverrides');
 
 const ROUND_WEEKS = [
   { name: 'wildCard', week: 1, points: 1.5 },
@@ -93,10 +94,10 @@ module.exports = async (req, res) => {
       res.json({
         season: Number(season),
         updatedAt: new Date().toISOString(),
-        source: 'espn-fallback',
+        source: 'sportsdataio',
         hasSportsDataKey: Boolean(process.env.SPORTSDATAIO_API_KEY),
         rounds: ROUND_WEEKS,
-        playoffWins: sportsData.playoffWins,
+        playoffWins: applyManualPlayoffOverrides(sportsData.playoffWins),
         wildcardByes: sportsData.wildcardByes,
       });
       return;
@@ -141,7 +142,7 @@ module.exports = async (req, res) => {
       source: 'espn-fallback',
       hasSportsDataKey: Boolean(process.env.SPORTSDATAIO_API_KEY),
       rounds: ROUND_WEEKS,
-      playoffWins,
+      playoffWins: applyManualPlayoffOverrides(playoffWins),
       wildcardByes,
     });
   } catch (err) {
