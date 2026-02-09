@@ -9,11 +9,15 @@ const {
 } = manualOverrides;
 
 describe('manualOverrides (api)', () => {
-  it('adds manual conference and Super Bowl wins', () => {
-    const updated = applyManualPlayoffOverrides({});
-    expect(updated['New England Patriots'].conference).toBe(1);
-    expect(updated['Seattle Seahawks'].conference).toBe(1);
-    expect(updated['Seattle Seahawks'].superBowl).toBe(1);
+  it('adds manual divisional, conference, and Super Bowl wins with byes', () => {
+    const result = applyManualPlayoffOverrides({}, {});
+    expect(result.playoffWins['New England Patriots'].divisional).toBe(1);
+    expect(result.playoffWins['New England Patriots'].conference).toBe(1);
+    expect(result.playoffWins['Seattle Seahawks'].divisional).toBe(1);
+    expect(result.playoffWins['Seattle Seahawks'].conference).toBe(1);
+    expect(result.playoffWins['Seattle Seahawks'].superBowl).toBe(1);
+    expect(result.wildcardByes['New England Patriots']).toBe(true);
+    expect(result.wildcardByes['Seattle Seahawks']).toBe(true);
   });
 
   it('returns manual conference schedule for week 3', () => {

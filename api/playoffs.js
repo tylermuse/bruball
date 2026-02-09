@@ -91,14 +91,15 @@ module.exports = async (req, res) => {
     const sportsData = await fetchSportsDataPlayoffs(season, forceRefresh);
 
     if (sportsData) {
+      const overridden = applyManualPlayoffOverrides(sportsData.playoffWins, sportsData.wildcardByes);
       res.json({
         season: Number(season),
         updatedAt: new Date().toISOString(),
         source: 'sportsdataio',
         hasSportsDataKey: Boolean(process.env.SPORTSDATAIO_API_KEY),
         rounds: ROUND_WEEKS,
-        playoffWins: applyManualPlayoffOverrides(sportsData.playoffWins),
-        wildcardByes: sportsData.wildcardByes,
+        playoffWins: overridden.playoffWins,
+        wildcardByes: overridden.wildcardByes,
       });
       return;
     }
@@ -136,14 +137,15 @@ module.exports = async (req, res) => {
       }
     });
 
+    const overridden = applyManualPlayoffOverrides(playoffWins, wildcardByes);
     res.json({
       season: Number(season),
       updatedAt: new Date().toISOString(),
       source: 'espn-fallback',
       hasSportsDataKey: Boolean(process.env.SPORTSDATAIO_API_KEY),
       rounds: ROUND_WEEKS,
-      playoffWins: applyManualPlayoffOverrides(playoffWins),
-      wildcardByes,
+      playoffWins: overridden.playoffWins,
+      wildcardByes: overridden.wildcardByes,
     });
   } catch (err) {
     console.error(err);
