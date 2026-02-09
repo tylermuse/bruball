@@ -4,6 +4,7 @@ import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById } from '../data/teams';
 import { getPlayerPoints, getTeamPoints, resolveTeamRecord, usePlayoffs, useStandings } from '../lib/standings';
 import { useEffect, useMemo, useState } from 'react';
+import { buildLeaderboardCache, readLeaderboardCache } from '../lib/leaderboardCache';
 
 type LeaderboardProps = {
   refreshKey?: number;
@@ -60,16 +61,13 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
 
   useEffect(() => {
     const stored = window.localStorage.getItem('bruball:leaderboardTotals');
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored) as { totals?: Record<string, number> };
-      if (parsed?.totals) {
-        setFrozenTotals(parsed.totals);
-      }
-    } catch {
+    const totals = readLeaderboardCache(stored, playoffs?.updatedAt ?? null);
+    if (totals) {
+      setFrozenTotals(totals);
+    } else if (stored) {
       window.localStorage.removeItem('bruball:leaderboardTotals');
     }
-  }, []);
+  }, [playoffs?.updatedAt]);
 
   useEffect(() => {
     if (!hasSuperBowlWinner) return;
@@ -79,9 +77,12 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
       acc[player.id] = player.livePoints;
       return acc;
     }, {});
-    window.localStorage.setItem('bruball:leaderboardTotals', JSON.stringify({ totals }));
+    window.localStorage.setItem(
+      'bruball:leaderboardTotals',
+      buildLeaderboardCache(totals, playoffs?.updatedAt ?? null),
+    );
     setFrozenTotals(totals);
-  }, [hasSuperBowlWinner, players, frozenTotals]);
+  }, [hasSuperBowlWinner, players, frozenTotals, playoffs?.updatedAt]);
 
   useEffect(() => {
     if (!champion || players.length === 0) return;
