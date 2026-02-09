@@ -1,43 +1,18 @@
 import express from "express";
+import { mapSportsDataStandings } from "./standings.js";
+import { hasPlayoffResults, hasScheduleGames } from "./sportsdata.js";
+import { getRoundPoints } from "./roundPoints.js";
+import {
+  applyManualConferenceWinners,
+  applyManualPlayoffOverrides,
+  applyManualSuperBowlWinner,
+  getManualPostseasonSchedule,
+} from "./manualOverrides.js";
 
 const app = express();
 const PORT = process.env.PORT || 5050;
 const SERVER_VERSION = "standings-debug-v3";
-const MANUAL_CONFERENCE_WINNERS = ["New England Patriots", "Seattle Seahawks"];
-
-function applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel) {
-  const isConferenceRound =
-    seasonType === 3 &&
-    (weekNumber === 3 ||
-      String(weekLabel || "").toLowerCase().includes("conference"));
-  if (!isConferenceRound) return games;
-
-  return games.map((game) => {
-    if (game.winnerName) return game;
-    const winner = MANUAL_CONFERENCE_WINNERS.find((team) => {
-      return team === game.homeTeamName || team === game.awayTeamName;
-    });
-    if (!winner) return game;
-    return { ...game, winnerName: winner, completed: true };
-  });
-}
-
-function applyManualPlayoffOverrides(playoffWins) {
-  const next = { ...(playoffWins ?? {}) };
-  MANUAL_CONFERENCE_WINNERS.forEach((teamName) => {
-    const current = next[teamName] ?? {
-      wildCard: 0,
-      divisional: 0,
-      conference: 0,
-      superBowl: 0,
-    };
-    next[teamName] = {
-      ...current,
-      conference: Math.max(current.conference ?? 0, 1),
-    };
-  });
-  return next;
-}
+ 
 
 function getDefaultSeason() {
   const now = new Date();
@@ -63,6 +38,18 @@ app.get("/api/standings", async (req, res) => {
       month < 8 ? now.getFullYear() - 1 : now.getFullYear();
 
     const season = req.query.season ?? defaultSeason;
+    const apiKey = process.env.SPORTSDATAIO_API_KEY;
+
+    if (apiKey) {
+      const sportsDataStandings = await fetchSportsDataStandings(season, apiKey);
+      if (Array.isArray(sportsDataStandings) && sportsDataStandings.length > 0) {
+        return res.json({
+          season: Number(season),
+          updatedAt: new Date().toISOString(),
+          teams: mapSportsDataStandings(sportsDataStandings),
+        });
+      }
+    }
 
     const baseParams = `season=${season}&seasontype=2&region=us&lang=en&contentorigin=espn`;
     const urls = [
@@ -152,12 +139,29 @@ app.get("/api/schedule", async (req, res) => {
     const phase = req.query.phase;
     const parsedWeek = req.query.week ? Number(req.query.week) : null;
     const weekParam = Number.isFinite(parsedWeek) ? parsedWeek : null;
+    if (phase === "postseason" && typeof weekParam === "number") {
+      const manualGames = getManualPostseasonSchedule(weekParam);
+      if (manualGames) {
+        return res.json({
+          season: getDefaultSeason(),
+          week: weekParam,
+          weekLabel: postseasonLabelForWeek(weekParam),
+          seasonType: 3,
+          games: manualGames,
+        });
+      }
+    }
     const sportsDataSchedule = await fetchSportsDataSchedule(phase, weekParam);
-    if (sportsDataSchedule) {
+    if (sportsDataSchedule && hasScheduleGames(sportsDataSchedule.games)) {
       return res.json({
         ...sportsDataSchedule,
-        games: applyManualConferenceWinners(
-          sportsDataSchedule.games,
+        games: applyManualSuperBowlWinner(
+          applyManualConferenceWinners(
+            sportsDataSchedule.games,
+            sportsDataSchedule.seasonType,
+            sportsDataSchedule.week,
+            sportsDataSchedule.weekLabel,
+          ),
           sportsDataSchedule.seasonType,
           sportsDataSchedule.week,
           sportsDataSchedule.weekLabel,
@@ -220,17 +224,25 @@ app.get("/api/schedule", async (req, res) => {
       requestedSeasonTypeId ??
       seasonTypeId ??
       null;
-    const weekNumber =
+    let weekNumber =
       normalizedSchedule?.week?.number ??
       requestedWeek ??
       week ??
       null;
 
     if (phase && phase !== "current" && typeof requestedWeek === "number") {
-      weekLabel =
-        phase === "postseason" ? weekLabel : `Week ${requestedWeek}`;
+      if (phase === "postseason") {
+        weekLabel = postseasonLabelForWeek(requestedWeek);
+        weekNumber = requestedWeek;
+      } else {
+        weekLabel = `Week ${requestedWeek}`;
+        weekNumber = requestedWeek;
+      }
     }
-    const roundPoints = getRoundPoints(weekLabel, seasonType, weekNumber);
+    const roundPoints =
+      phase === "postseason" && typeof requestedWeek === "number"
+        ? postseasonPointsForWeek(requestedWeek)
+        : getRoundPoints(weekLabel, seasonType, weekNumber);
 
     const games = events
       .map((event) => {
@@ -286,7 +298,12 @@ app.get("/api/schedule", async (req, res) => {
       week: weekNumber,
       weekLabel,
       seasonType,
-      games: applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel),
+      games: applyManualSuperBowlWinner(
+        applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel),
+        seasonType,
+        weekNumber,
+        weekLabel,
+      ),
     });
   } catch (err) {
     console.error(err);
@@ -338,7 +355,7 @@ app.get("/api/playoffs", async (req, res) => {
       });
     }
     const sportsData = await fetchSportsDataPlayoffs(season);
-    if (sportsData) {
+    if (sportsData && hasPlayoffResults(sportsData.playoffWins, sportsData.wildcardByes)) {
       return res.json({
         season: Number(season),
         updatedAt: new Date().toISOString(),
@@ -529,29 +546,6 @@ function summarizeStandingsShape(data) {
       };
     }),
   };
-}
-
-function getRoundPoints(weekLabel, seasonType, weekNumber) {
-  const label = (weekLabel || "").toLowerCase();
-  if (seasonType === 3 || label.includes("wild card") || label.includes("wildcard")) {
-    if (typeof weekNumber === "number") {
-      if (weekNumber === 1) return 1.5;
-      if (weekNumber === 2) return 2.5;
-      if (weekNumber === 3) return 3.5;
-      if (weekNumber === 4) return 5;
-    }
-    return 1.5;
-  }
-  if (label.includes("divisional")) {
-    return 2.5;
-  }
-  if (label.includes("conference")) {
-    return 3.5;
-  }
-  if (label.includes("super bowl")) {
-    return 5;
-  }
-  return 1;
 }
 
 async function fetchStandingsData(season) {
@@ -961,26 +955,38 @@ async function fetchSportsDataSchedule(phase, weekParam) {
     month < 8 ? now.getFullYear() - 1 : now.getFullYear();
 
   const standings = await fetchSportsDataStandings(defaultSeason, apiKey);
-  if (!standings) return null;
-
   const abbrToName = {};
-  standings.forEach((team) => {
-    const abbr = team?.Team || team?.Abbreviation;
-    const city = team?.City;
-    const nickname = team?.Name;
-    const fullName = city && nickname ? `${city} ${nickname}` : team?.Name;
-    const displayName = team?.FullName || team?.TeamName || fullName;
-    if (abbr && displayName) {
-      abbrToName[abbr] = displayName;
-    }
-  });
+  if (Array.isArray(standings)) {
+    standings.forEach((team) => {
+      const abbr = team?.Team || team?.Abbreviation;
+      const city = team?.City;
+      const nickname = team?.Name;
+      const fullName = city && nickname ? `${city} ${nickname}` : team?.Name;
+      const displayName = team?.FullName || team?.TeamName || fullName;
+      if (abbr && displayName) {
+        abbrToName[abbr] = displayName;
+      }
+    });
+  }
 
   if (phase === "regular" && weekParam) {
-    return fetchSportsDataScheduleByWeek(defaultSeason, weekParam, "regular", abbrToName, apiKey);
+    return await fetchSportsDataScheduleByWeek(
+      defaultSeason,
+      weekParam,
+      "regular",
+      abbrToName,
+      apiKey,
+    );
   }
 
   if (phase === "postseason" && weekParam) {
-    return fetchSportsDataScheduleByWeek(defaultSeason, weekParam, "postseason", abbrToName, apiKey);
+    return await fetchSportsDataScheduleByWeek(
+      defaultSeason,
+      weekParam,
+      "postseason",
+      abbrToName,
+      apiKey,
+    );
   }
 
   const postseasonWeek = await findCurrentPostseasonWeek(defaultSeason, apiKey);
@@ -1057,15 +1063,21 @@ async function findCurrentPostseasonWeek(season, apiKey) {
     { week: 4, label: "Super Bowl", pointsAtStake: 5 },
   ];
 
-  for (const round of rounds) {
-    const games = await fetchSportsDataScoresByWeek(seasonValue, round.week, apiKey);
-    const inWindow = games.some((game) => {
+  const hasGamesInWindow = (games) => {
+    return games.some((game) => {
       const dateValue = game?.Date;
       if (!dateValue) return false;
       const date = new Date(dateValue);
       return date >= windowStart && date <= windowEnd;
     });
-    if (inWindow) {
+  };
+
+  for (const round of rounds) {
+    let games = await fetchSportsDataScoresByWeek(seasonValue, round.week, apiKey);
+    if (round.week === 4 && games.length === 0) {
+      games = await fetchSportsDataScoresByWeek(seasonValue, 5, apiKey);
+    }
+    if (hasGamesInWindow(games)) {
       return { ...round, seasonValue };
     }
   }
@@ -1083,9 +1095,9 @@ async function fetchSportsDataScheduleByWeek(season, week, phase, abbrToName, ap
 
   let mappedGames = [];
 
-  for (const seasonValue of seasonValues) {
-    const games = await fetchSportsDataScoresByWeek(seasonValue, week, apiKey);
-    mappedGames = games
+  const resolveGamesForWeek = async (seasonValue, targetWeek) => {
+    const games = await fetchSportsDataScoresByWeek(seasonValue, targetWeek, apiKey);
+    return games
       .map((game) => {
         const homeAbbr = game?.HomeTeam;
         const awayAbbr = game?.AwayTeam;
@@ -1126,11 +1138,21 @@ async function fetchSportsDataScheduleByWeek(season, week, phase, abbrToName, ap
         };
       })
       .filter(Boolean);
+  };
+
+  for (const seasonValue of seasonValues) {
+    mappedGames = await resolveGamesForWeek(seasonValue, week);
+
+    if (mappedGames.length === 0 && isPostseason && week === 4) {
+      mappedGames = await resolveGamesForWeek(seasonValue, 5);
+    }
 
     if (mappedGames.length > 0) {
       break;
     }
   }
+
+  if (mappedGames.length === 0) return null;
 
   return {
     season: Number(season),

@@ -3,7 +3,7 @@ import { Medal, Crown } from 'lucide-react';
 import { TeamLogo } from '../lib/teamLogos';
 import { getTeamById } from '../data/teams';
 import { getPlayerPoints, getTeamPoints, resolveTeamRecord, usePlayoffs, useStandings } from '../lib/standings';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type LeaderboardProps = {
   refreshKey?: number;
@@ -12,6 +12,13 @@ type LeaderboardProps = {
 export function Leaderboard({ refreshKey }: LeaderboardProps) {
   const { standings } = useStandings(refreshKey);
   const { playoffs } = usePlayoffs(refreshKey);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [frozenTotals, setFrozenTotals] = useState<Record<string, number> | null>(null);
+  const hasSuperBowlWinner = useMemo(() => {
+    return Object.values(playoffs?.playoffWins ?? {}).some((record) => {
+      return (record?.superBowl ?? 0) > 0;
+    });
+  }, [playoffs]);
   const { players, playerError } = useMemo(() => {
     try {
       const allPlayers = getAllPlayers();
@@ -33,6 +40,17 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
     }
   }, [standings, playoffs]);
 
+  const storedPlayers = useMemo(() => {
+    if (!frozenTotals) return players;
+    const withFrozen = players
+      .map((player) => ({
+        ...player,
+        livePoints: frozenTotals[player.id] ?? player.livePoints,
+      }))
+      .sort((a, b) => b.livePoints - a.livePoints);
+    return withFrozen;
+  }, [players, frozenTotals]);
+  const champion = hasSuperBowlWinner ? storedPlayers[0] : null;
   const getMedalIcon = (rank: number) => {
     if (rank === 1) return <Crown className="size-5 text-yellow-500" />;
     if (rank === 2) return <Medal className="size-5 text-gray-400" />;
@@ -40,13 +58,89 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
     return null;
   };
 
+  useEffect(() => {
+    const stored = window.localStorage.getItem('bruball:leaderboardTotals');
+    if (!stored) return;
+    try {
+      const parsed = JSON.parse(stored) as { totals?: Record<string, number> };
+      if (parsed?.totals) {
+        setFrozenTotals(parsed.totals);
+      }
+    } catch {
+      window.localStorage.removeItem('bruball:leaderboardTotals');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasSuperBowlWinner) return;
+    if (players.length === 0) return;
+    if (frozenTotals) return;
+    const totals = players.reduce<Record<string, number>>((acc, player) => {
+      acc[player.id] = player.livePoints;
+      return acc;
+    }, {});
+    window.localStorage.setItem('bruball:leaderboardTotals', JSON.stringify({ totals }));
+    setFrozenTotals(totals);
+  }, [hasSuperBowlWinner, players, frozenTotals]);
+
+  useEffect(() => {
+    if (!champion || players.length === 0) return;
+    setShowConfetti(true);
+    const timeoutId = window.setTimeout(() => setShowConfetti(false), 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [champion?.id, players.length]);
+
   return (
     <div className="space-y-4">
+      <style>{`
+        @keyframes confetti-fall {
+          0% { transform: translate3d(0, -10px, 0) rotate(0deg); opacity: 0; }
+          10% { opacity: 1; }
+          100% { transform: translate3d(0, 420px, 0) rotate(240deg); opacity: 0; }
+        }
+      `}</style>
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-xl text-gray-900 mb-2">Season Standings</h2>
         <p className="text-fuchsia-600 text-sm">Ranked by total points</p>
       </div>
+
+      {showConfetti && (
+        <div className="pointer-events-none fixed inset-0 z-50">
+          {Array.from({ length: 30 }).map((_, index) => {
+            const colors = ['#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
+            const left = 2 + (index * 96) / 29;
+            const delay = (index % 10) * 0.08;
+            const duration = 2 + (index % 5) * 0.2;
+            const size = 6 + (index % 4) * 2;
+            return (
+              <span
+                key={`confetti-overlay-${index}`}
+                className="absolute top-0 rounded-sm"
+                style={{
+                  left: `${left}%`,
+                  width: `${size}px`,
+                  height: `${size * 1.8}px`,
+                  backgroundColor: colors[index % colors.length],
+                  animation: `confetti-fall ${duration}s ease-in-out ${delay}s 1`,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {champion && (
+        <div className="relative overflow-hidden rounded-xl border border-fuchsia-300 bg-fuchsia-50 px-5 py-4 shadow-sm">
+          <div className="flex items-center gap-3">
+            <Crown className="size-6 text-yellow-500" />
+            <div>
+              <div className="text-sm text-gray-600">Bruball Champ</div>
+              <div className="text-lg font-semibold text-gray-900">{champion.name}</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Leaderboard */}
       <div className="space-y-3">
@@ -55,13 +149,18 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
             {playerError}
           </div>
         )}
-        {!playerError && players.map((player, index) => {
+        {!playerError && storedPlayers.map((player, index) => {
           const rank = index + 1;
+          const isChampion = champion?.id === player.id;
 
           return (
             <div
               key={player.id}
-              className="rounded-lg p-4 transition-all shadow-sm bg-white border border-gray-200"
+              className={`rounded-lg p-4 transition-all shadow-sm border ${
+                isChampion
+                  ? 'border-fuchsia-400 bg-fuchsia-50/60 ring-1 ring-fuchsia-300'
+                  : 'bg-white border-gray-200'
+              }`}
             >
               <div className="flex items-center gap-4 mb-3">
                 {/* Rank */}
@@ -82,6 +181,11 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
                   </div>
                   <div className="text-sm mt-0.5 text-gray-600">
                     {player.teams.length} teams
+                    {isChampion && (
+                      <span className="ml-2 rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-semibold text-yellow-800">
+                        Bruball Champ
+                      </span>
+                    )}
                   </div>
                 </div>
 

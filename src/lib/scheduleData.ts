@@ -49,7 +49,7 @@ interface RawScheduleGame {
   played: boolean;
 }
 
-const TEAM_ABBR_TO_NAME: Record<string, string> = {
+export const TEAM_ABBR_TO_NAME: Record<string, string> = {
   ARI: 'Arizona Cardinals',
   ATL: 'Atlanta Falcons',
   BAL: 'Baltimore Ravens',
@@ -323,57 +323,7 @@ function toScheduleGame(apiGame: ApiGame): Game | null {
   };
 }
 
-function applyConferenceOverrides(
-  games: Game[],
-  seasonType: number | null,
-  week: number | null,
-  weekLabel: string | null,
-  selectedWeek: number | null,
-  phase: SchedulePhase,
-) {
-  const isConferenceRound =
-    (seasonType === 3 || phase === 'postseason') &&
-    (week === 3 ||
-      selectedWeek === 3 ||
-      Boolean(weekLabel?.toLowerCase().includes('conference')));
-  if (!isConferenceRound) return games;
-  return games.map((game) => {
-    if (game.winnerTeamId) return game;
-    if (game.homeTeamId === 'new-england-patriots' || game.awayTeamId === 'new-england-patriots') {
-      return { ...game, winnerTeamId: 'new-england-patriots', completed: true };
-    }
-    if (game.homeTeamId === 'seattle-seahawks' || game.awayTeamId === 'seattle-seahawks') {
-      return { ...game, winnerTeamId: 'seattle-seahawks', completed: true };
-    }
-    return game;
-  });
-}
 
-function applySuperBowlOverride(
-  games: Game[],
-  seasonType: number | null,
-  week: number | null,
-  weekLabel: string | null,
-  selectedWeek: number | null,
-  phase: SchedulePhase,
-) {
-  const isSuperBowl =
-    (seasonType === 3 || phase === 'postseason') &&
-    (week === 4 ||
-      selectedWeek === 4 ||
-      Boolean(weekLabel?.toLowerCase().includes('super bowl')));
-  if (!isSuperBowl) return games;
-  if (games.length === 0) return games;
-
-  const [firstGame, ...rest] = games;
-  const updatedGame: Game = {
-    ...firstGame,
-    homeTeamId: 'new-england-patriots',
-    awayTeamId: 'seattle-seahawks',
-  };
-
-  return [updatedGame, ...rest.filter(() => false)];
-}
 
 export function getScheduleWithOwners(schedule: Game[]): GameWithOwners[] {
   return schedule.map((game) => {
@@ -424,7 +374,7 @@ export function useWeeklySchedule(
         }
 
         if (phase !== 'current' && week) {
-          const local = getLocalSchedule(phase, week);
+          const local = phase === 'regular' ? getLocalSchedule(phase, week) : null;
           if (local && local.games.length > 0) {
             if (!active) return;
             const nextGames = local.games
@@ -461,26 +411,10 @@ export function useWeeklySchedule(
         let nextGames = mappedGames;
         let nextWeekLabel =
           data.weekLabel ?? (data.week ? `Week ${data.week}` : 'This Week');
-        setWeekLabel(label);
+        setWeekLabel(nextWeekLabel);
         setCurrentWeek(data.week ?? null);
         setCurrentSeasonType(data.seasonType ?? null);
-        setGames(
-          applySuperBowlOverride(
-            applyConferenceOverrides(
-              mappedGames,
-              data.seasonType ?? null,
-              data.week ?? null,
-              data.weekLabel ?? null,
-              week,
-              phase,
-            ),
-            data.seasonType ?? null,
-            data.week ?? null,
-            data.weekLabel ?? null,
-            week,
-            phase,
-          ),
-        );
+        setGames(mappedGames);
       } catch {
         // Keep fallback schedule on error.
       }
