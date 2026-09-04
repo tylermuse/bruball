@@ -29,9 +29,9 @@
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --color-amber-600: oklch(.666 .179 58.318);
     --color-yellow-500: oklch(.795 .184 86.047);
-    --color-fuchsia-50: oklch(.977 .017 320.058);
-    --color-fuchsia-200: oklch(.903 .076 319.62);
-    --color-fuchsia-600: oklch(.591 .293 322.896);
+    --color-fuchsia-50: oklch(.98 .016 73.684);
+    --color-fuchsia-200: oklch(.901 .076 70.697);
+    --color-fuchsia-600: oklch(.646 .222 41.116);
     --color-gray-50: oklch(.985 .002 247.839);
     --color-gray-100: oklch(.967 .003 264.542);
     --color-gray-200: oklch(.928 .006 264.531);

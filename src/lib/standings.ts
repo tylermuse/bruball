@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { getTeamById, normalizeTeamName, type Team } from '../data/teams';
-import schedule2025 from '../data/schedule-2025.json';
+import schedule2026 from '../data/schedule-2026.json';
 import type { Player, TeamRecord } from './gameData';
 import { getLocalPlayoffSummary, TEAM_ABBR_TO_NAME } from './scheduleData';
 
@@ -101,7 +101,7 @@ export function buildStandingsFromSchedule(
 }
 
 function getLocalStandings(): StandingsMap {
-  const localSchedule = schedule2025 as RawScheduleGame[];
+  const localSchedule = schedule2026 as RawScheduleGame[];
   return buildStandingsFromSchedule(localSchedule, TEAM_ABBR_TO_NAME);
 }
 

@@ -19,13 +19,18 @@ export function DraftResults() {
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-fuchsia-50 rounded-xl p-5 shadow-sm border border-fuchsia-200">
-        <div className="text-sm text-gray-600 mb-1">2025 Season</div>
+        <div className="text-sm text-gray-600 mb-1">2026 Season</div>
         <div className="text-2xl text-gray-900">Draft Results</div>
         <div className="text-sm text-gray-600 mt-2">Draft order - One team from each division</div>
       </div>
 
       {/* Draft Picks List */}
       <div className="space-y-2">
+        {draftPicks.length === 0 && (
+          <div className="rounded-lg p-5 shadow-sm bg-fuchsia-50 border border-fuchsia-200 text-sm text-gray-700">
+            The 2026 draft hasn't happened yet. Once your league drafts, every pick will show up here.
+          </div>
+        )}
         {draftPicks.map((pick) => {
           const teamInfo = getTeamById(pick.teamId);
           if (!teamInfo) return null;
@@ -39,6 +44,7 @@ export function DraftResults() {
             <div
               key={pick.pickNumber}
               className="rounded-lg p-3 shadow-sm flex items-center gap-3 bg-white border border-gray-200"
+              style={{ borderLeft: `4px solid ${teamInfo.primaryColor}` }}
             >
               {/* Pick Number */}
               <div className="flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 text-gray-700 font-semibold shrink-0">
