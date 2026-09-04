@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { TEAMS, getTeamById } from '../data/teams';
 import { TeamLogo } from '../lib/teamLogos';
 import { VALUATION_BOARD_2026 } from '../lib/valuation';
-import { TAU_PRESETS, type CpuStrategy } from '../lib/cpuAI';
+import { TAU_PRESETS } from '../lib/cpuAI';
 import {
   loadDraft,
   saveDraft,
@@ -26,7 +26,6 @@ import {
   reservedForPlayer,
   rosterValuation,
   setMemberIsCpu,
-  setMemberCpuStrategy,
   setMemberCpuTau,
   setMemberCpuHomer,
   DIVISIONS,
@@ -40,12 +39,6 @@ import {
 const shortDiv = (d: string) => {
   const [conf, region] = d.split(' ');
   return `${conf} ${region[0]}`;
-};
-
-const STRATEGY_LABEL: Record<CpuStrategy, string> = {
-  chalk: 'Chalk',
-  scarcity: 'Scarcity',
-  blocker: 'Blocker',
 };
 
 const TAG_LABEL: Record<PickTag, string> = {
@@ -317,15 +310,6 @@ export function Draft() {
                   </div>
                   {isCpu && member?.cpu && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, paddingLeft: 36 }}>
-                      <select
-                        className="dr-strategy-select"
-                        value={member.cpu.strategy}
-                        onChange={(e) => apply(setMemberCpuStrategy(state, id, e.target.value as CpuStrategy))}
-                      >
-                        {(['chalk', 'scarcity', 'blocker'] as CpuStrategy[]).map((s) => (
-                          <option key={s} value={s}>{STRATEGY_LABEL[s]}</option>
-                        ))}
-                      </select>
                       <div className="dr-tau-row" style={{ minWidth: 180 }}>
                         {(Object.entries(TAU_PRESETS) as Array<[string, number]>).map(([label, tau]) => (
                           <button
@@ -475,7 +459,7 @@ export function Draft() {
           {clockName}
           {clockMember?.isCpu && (
             <span className="dr-cpu-badge">
-              <Bot className="size-3" /> CPU · {STRATEGY_LABEL[clockMember.cpu?.strategy ?? 'chalk']}
+              <Bot className="size-3" /> CPU
             </span>
           )}
         </div>
