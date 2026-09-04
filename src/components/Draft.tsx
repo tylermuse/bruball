@@ -8,7 +8,6 @@ import { TAU_PRESETS } from '../lib/cpuAI';
 import {
   loadDraft,
   saveDraft,
-  clearDraft,
   startDraft,
   shuffleOrder,
   makePick,
@@ -56,12 +55,31 @@ function pct(v: number) {
   return `${(v * 100).toFixed(1)}%`;
 }
 
+// Live draft night: Thursday, September 10, 2026 (midnight America/Chicago).
+// Until then, the app only allows simulation — this is what flips it on.
+const LIVE_DRAFT_UNLOCKS_AT = new Date('2026-09-10T05:00:00.000Z');
+const LIVE_DRAFT_UNLOCK_LABEL = 'Thursday, September 10';
+
+function useNow(intervalMs = 60000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
+
 export function Draft() {
+  const now = useNow();
+  const liveDraftLocked = now < LIVE_DRAFT_UNLOCKS_AT.getTime();
+
   // Simulation mode is a fully separate storage key (SIM_KEY vs LIVE_KEY) —
   // running a test draft here can never touch the real draft, and
-  // rostersAsPlayers() (leaderboard/schedule) only ever reads LIVE_KEY.
+  // rostersAsPlayers() (leaderboard/schedule) only ever reads LIVE_KEY. Before
+  // draft night the app is locked into simulation regardless of this toggle.
   const [simulate, setSimulate] = useState(false);
-  const storageKey = simulate ? SIM_KEY : LIVE_KEY;
+  const effectiveSimulate = liveDraftLocked || simulate;
+  const storageKey = effectiveSimulate ? SIM_KEY : LIVE_KEY;
   const [state, setState] = useState<DraftState>(() => loadDraft(storageKey));
   const [selectedDivision, setSelectedDivision] = useState<string | null>(null);
   const board = VALUATION_BOARD_2026;
@@ -228,7 +246,12 @@ export function Draft() {
     `}</style>
   );
 
-  const simBanner = simulate ? (
+  const simBanner = liveDraftLocked ? (
+    <div className="dr-sim-banner">
+      <Lock className="size-4" />
+      <span>Simulation only — the live draft unlocks {LIVE_DRAFT_UNLOCK_LABEL}.</span>
+    </div>
+  ) : simulate ? (
     <div className="dr-sim-banner">
       <FlaskConical className="size-4" />
       <span>Simulation — this test draft is isolated from your real 2026 draft.</span>
