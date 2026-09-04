@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { TEAMS } from '../data/teams';
 import { VALUATION_BOARD_2026 } from './valuation';
 import {
+  DEFAULT_HOMER_TEAMS,
+  DEFAULT_MEMBERS,
   DIVISIONS,
   ROUNDS,
   autoResolveForced,
@@ -15,6 +17,7 @@ import {
   picksByPlayer,
   reservedTeams,
   rosterValuation,
+  setMemberCpuHomer,
   setMemberIsCpu,
   startDraft,
   totalPicks,
@@ -227,5 +230,32 @@ describe('rosterValuation', () => {
     const expectedValuation = VALUATION_BOARD_2026.byId[team.id];
     expect(points).toBeCloseTo(expectedValuation.points, 6);
     expect(title).toBeCloseTo(expectedValuation.title, 6);
+  });
+});
+
+describe('CPU homer defaults', () => {
+  it('assigns the configured default homer team for austin, lindy, and nick when toggled to CPU', () => {
+    let state = startDraft({
+      status: 'setup',
+      members: DEFAULT_MEMBERS,
+      order: DEFAULT_MEMBERS.map((m) => m.id),
+      picks: [],
+      startedAt: null,
+    });
+    (['austin', 'lindy', 'nick'] as const).forEach((id) => {
+      state = setMemberIsCpu(state, id, true);
+    });
+    state.members.forEach((m) => {
+      if (m.id in DEFAULT_HOMER_TEAMS) {
+        expect(m.cpu?.homerTeamId).toBe(DEFAULT_HOMER_TEAMS[m.id]);
+      }
+    });
+  });
+
+  it('setMemberCpuHomer overrides the homer team for a CPU manager', () => {
+    let state = freshActive();
+    state = setMemberIsCpu(state, 'a', true);
+    state = setMemberCpuHomer(state, 'a', 'seattle-seahawks');
+    expect(state.members.find((m) => m.id === 'a')?.cpu?.homerTeamId).toBe('seattle-seahawks');
   });
 });

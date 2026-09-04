@@ -49,6 +49,14 @@ export const DEFAULT_MEMBERS: Member[] = [
   { id: 'nick', name: 'Nick' },
 ];
 
+/** §4.3 — each bot's recurring quirk. Real preferences for this group; falls
+ * back to a random team for anyone not listed here. */
+export const DEFAULT_HOMER_TEAMS: Record<string, Team['id']> = {
+  austin: 'dallas-cowboys',
+  lindy: 'kansas-city-chiefs',
+  nick: 'philadelphia-eagles',
+};
+
 export const DIVISIONS = [
   'AFC East', 'AFC North', 'AFC South', 'AFC West',
   'NFC East', 'NFC North', 'NFC South', 'NFC West',
@@ -340,7 +348,7 @@ export function setMemberIsCpu(
       m.cpu ?? {
         strategy: randomStrategy(rand),
         tau: TAU_PRESETS.competent,
-        homerTeamId: TEAMS[Math.floor(rand() * TEAMS.length)]?.id,
+        homerTeamId: DEFAULT_HOMER_TEAMS[playerId] ?? TEAMS[Math.floor(rand() * TEAMS.length)]?.id,
       };
     return { ...m, isCpu: true, cpu };
   });
@@ -361,6 +369,17 @@ export function setMemberCpuStrategy(
 export function setMemberCpuTau(state: DraftState, playerId: string, tau: number): DraftState {
   const members = state.members.map((m) =>
     m.id === playerId && m.cpu ? { ...m, cpu: { ...m.cpu, tau } } : m,
+  );
+  return { ...state, members };
+}
+
+export function setMemberCpuHomer(
+  state: DraftState,
+  playerId: string,
+  homerTeamId: Team['id'] | undefined,
+): DraftState {
+  const members = state.members.map((m) =>
+    m.id === playerId && m.cpu ? { ...m, cpu: { ...m.cpu, homerTeamId } } : m,
   );
   return { ...state, members };
 }

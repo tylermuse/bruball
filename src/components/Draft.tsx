@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Undo2, RotateCcw, Shuffle, CheckCircle2, ChevronUp, ChevronDown, ChevronLeft, Bot, User, Lock, FlaskConical, X } from 'lucide-react';
+import { Undo2, RotateCcw, Shuffle, CheckCircle2, ChevronUp, ChevronDown, Bot, User, Lock, FlaskConical, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { TEAMS, getTeamById } from '../data/teams';
 import { TeamLogo } from '../lib/teamLogos';
@@ -28,6 +28,7 @@ import {
   setMemberIsCpu,
   setMemberCpuStrategy,
   setMemberCpuTau,
+  setMemberCpuHomer,
   DIVISIONS,
   ROUNDS,
   LIVE_KEY,
@@ -199,8 +200,6 @@ export function Draft() {
       .dr-divbtn-name { font-size: 14px; font-weight: 700; color: #16202b; }
       .dr-divbtn-meta { font-size: 11px; color: #94a3b8; margin-top: 2px; }
       .dr-divbtn-best { font-size: 12px; font-weight: 700; color: #c2410c; text-align: right; white-space: nowrap; }
-      .dr-back { display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600;
-        color: #64748b; cursor: pointer; background: none; border: 0; padding: 4px 0; margin-bottom: 4px; }
       .dr-tag { font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em;
         padding: 2px 6px; border-radius: 6px; white-space: nowrap; }
       .dr-tag-homer { background: #fef3c7; color: #92400e; }
@@ -276,7 +275,6 @@ export function Draft() {
             {state.order.map((id, i) => {
               const member = state.members.find((m) => m.id === id);
               const isCpu = !!member?.isCpu;
-              const homer = isCpu && member?.cpu?.homerTeamId ? getTeamById(member.cpu.homerTeamId) : null;
               return (
                 <div key={id} className="dr-setup-row">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -339,7 +337,19 @@ export function Draft() {
                           </button>
                         ))}
                       </div>
-                      {homer && <div className="dr-homer-note">Homer: {homer.name}</div>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span className="dr-homer-note">Homer:</span>
+                        <select
+                          className="dr-strategy-select"
+                          value={member.cpu.homerTeamId ?? ''}
+                          onChange={(e) => apply(setMemberCpuHomer(state, id, e.target.value || undefined))}
+                        >
+                          <option value="">None</option>
+                          {TEAMS.map((t) => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -471,6 +481,8 @@ export function Draft() {
         </div>
         <div style={{ fontSize: 13, color: 'rgba(255,255,255,.9)', marginTop: 4 }}>
           {divisionsLeft} division{divisionsLeft === 1 ? '' : 's'} left to fill
+          {clockMember?.isCpu && clockMember.cpu?.homerTeamId &&
+            ` · homer: ${getTeamById(clockMember.cpu.homerTeamId)?.name ?? ''}`}
           {clockMember?.isCpu && ' · thinking…'}
         </div>
       </div>
@@ -529,27 +541,27 @@ export function Draft() {
         </div>
       )}
 
-      {/* Two-step choice board: division, then team. Human turns only. */}
+      {/* Two-step choice board: division, then team, expanding in place. Human turns only. */}
       {!clockMember?.isCpu && (
         <div className="dr-card">
-          {!selectedDivision ? (
-            <>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', letterSpacing: '.06em', textTransform: 'uppercase' }}>
-                Pick a division for {clockName}
-              </div>
-              <div className="dr-sub" style={{ marginBottom: 10 }}>
-                Divisions {clockName} has already locked or has reserved are hidden.
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {choiceBoard.map((d) => (
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', letterSpacing: '.06em', textTransform: 'uppercase' }}>
+            Pick a division for {clockName}
+          </div>
+          <div className="dr-sub" style={{ marginBottom: 10 }}>
+            Divisions {clockName} has already locked or has reserved are hidden.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {choiceBoard.map((d) => {
+              const expanded = d.division === selectedDivision;
+              return (
+                <div key={d.division}>
                   <button
-                    key={d.division}
                     className="dr-divbtn"
                     onClick={() => {
                       if (d.availableCount === 1) {
                         pick(d.bestTeamId);
                       } else {
-                        setSelectedDivision(d.division);
+                        setSelectedDivision(expanded ? null : d.division);
                       }
                     }}
                   >
@@ -557,39 +569,37 @@ export function Draft() {
                       <div className="dr-divbtn-name">{d.division}</div>
                       <div className="dr-divbtn-meta">{d.availableCount} team{d.availableCount === 1 ? '' : 's'} available</div>
                     </div>
-                    <div className="dr-divbtn-best">
-                      Best: {getTeamById(d.bestTeamId)?.name ?? '—'}
-                      <div className="dr-pts">{d.bestPoints.toFixed(1)} pts</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div className="dr-divbtn-best">
+                        Best: {getTeamById(d.bestTeamId)?.name ?? '—'}
+                        <div className="dr-pts">{d.bestPoints.toFixed(1)} pts</div>
+                      </div>
+                      {expanded ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
                     </div>
                   </button>
-                ))}
-                {choiceBoard.length === 0 && (
-                  <div className="dr-sub">Nothing contested right now — resolving automatically…</div>
-                )}
-              </div>
-            </>
-          ) : (
-            <>
-              <button className="dr-back" onClick={() => setSelectedDivision(null)}>
-                <ChevronLeft className="size-4" /> All divisions
-              </button>
-              <div className="dr-divname" style={{ marginBottom: 8 }}>{selectedDivision}</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {selectedDivisionTeams.map(({ team, valuation }) => (
-                  <div key={team.id} className="dr-teamrow" style={{ borderLeft: `4px solid ${team.primaryColor}` }}>
-                    <TeamLogo teamId={team.id} size="sm" />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="dr-teamname">{team.name}</div>
-                      {valuation && (
-                        <div className="dr-pts">{valuation.points.toFixed(1)} pts · {pct(valuation.title)} title</div>
-                      )}
+                  {expanded && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 0 4px 14px', borderLeft: '2px solid #edf0f2', marginLeft: 8 }}>
+                      {selectedDivisionTeams.map(({ team, valuation }) => (
+                        <div key={team.id} className="dr-teamrow" style={{ borderLeft: `4px solid ${team.primaryColor}` }}>
+                          <TeamLogo teamId={team.id} size="sm" />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div className="dr-teamname">{team.name}</div>
+                            {valuation && (
+                              <div className="dr-pts">{valuation.points.toFixed(1)} pts · {pct(valuation.title)} title</div>
+                            )}
+                          </div>
+                          <button className="dr-draft" onClick={() => pick(team.id)}>Draft</button>
+                        </div>
+                      ))}
                     </div>
-                    <button className="dr-draft" onClick={() => pick(team.id)}>Draft</button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
+                  )}
+                </div>
+              );
+            })}
+            {choiceBoard.length === 0 && (
+              <div className="dr-sub">Nothing contested right now — resolving automatically…</div>
+            )}
+          </div>
         </div>
       )}
 
