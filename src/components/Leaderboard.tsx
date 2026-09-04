@@ -52,6 +52,7 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
     return withFrozen;
   }, [players, frozenTotals]);
   const champion = hasSuperBowlWinner ? storedPlayers[0] : null;
+  const anyDrafted = storedPlayers.some((p) => (p.teams?.length ?? 0) > 0);
   const getMedalIcon = (rank: number) => {
     if (rank === 1) return <Crown className="size-5 text-yellow-500" />;
     if (rank === 2) return <Medal className="size-5 text-gray-400" />;
@@ -106,10 +107,16 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
         <p className="text-fuchsia-600 text-sm">Ranked by total points</p>
       </div>
 
+      {!playerError && !anyDrafted && (
+        <div className="rounded-xl p-5 shadow-sm bg-fuchsia-50 border border-fuchsia-200 text-sm text-gray-700">
+          The 2026 draft hasn't happened yet. Once your league drafts, standings will fill in here and update from live results all season.
+        </div>
+      )}
+
       {showConfetti && (
         <div className="pointer-events-none fixed inset-0 z-50">
           {Array.from({ length: 30 }).map((_, index) => {
-            const colors = ['#ec4899', '#f59e0b', '#10b981', '#3b82f6'];
+            const colors = ['#ea580c', '#f59e0b', '#10b981', '#3b82f6'];
             const left = 2 + (index * 96) / 29;
             const delay = (index % 10) * 0.08;
             const duration = 2 + (index % 5) * 0.2;
@@ -154,7 +161,7 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
               <div className="flex items-center gap-4 mb-3">
                 {/* Rank */}
                 <div className="flex items-center justify-center w-10 h-10 shrink-0">
-                  {getMedalIcon(rank) || (
+                  {(anyDrafted && getMedalIcon(rank)) || (
                     <div
                       className="text-xl text-gray-600"
                     >
@@ -186,6 +193,21 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
                   </div>
                 </div>
               </div>
+
+              {/* Manager color signature */}
+              {player.teams.length > 0 && (
+                <div
+                  style={{ display: 'flex', height: 6, width: '100%', borderRadius: 999, overflow: 'hidden', marginBottom: 12 }}
+                  aria-hidden="true"
+                >
+                  {player.teams.map((t) => {
+                    const ti = getTeamById(t.teamId);
+                    return (
+                      <span key={t.teamId} style={{ flex: 1, backgroundColor: ti?.primaryColor ?? '#d1d5db' }} />
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Teams List */}
               <div className="pt-3 border-t border-gray-200">

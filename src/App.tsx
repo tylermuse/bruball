@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Schedule } from './components/Schedule';
 import { Leaderboard } from './components/Leaderboard';
-import { DraftResults } from './components/DraftResults';
+import { Draft } from './components/Draft';
+import { Toaster } from 'sonner';
 import { Calendar, Trophy, CircleCheckBig } from 'lucide-react';
 import { useStandings } from './lib/standings';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -31,7 +32,8 @@ export default function App() {
         day: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
-      })
+        timeZone: 'America/Chicago',
+      }) + ' CT'
     : null;
 
   return (
@@ -39,7 +41,7 @@ export default function App() {
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10 shadow-sm">
         <h1 className="text-center text-gray-900">Bruball</h1>
-        <p className="text-center text-gray-600 text-sm mt-1">2025 Season</p>
+        <p className="text-center text-gray-600 text-sm mt-1">2026 Season</p>
         {updatedLabel && (
           <p className="text-center text-gray-400 text-xs mt-1">
             Updated {updatedLabel}
@@ -59,7 +61,11 @@ export default function App() {
             <Leaderboard refreshKey={refreshKey} />
           </ErrorBoundary>
         )}
-        {activeTab === 'draft' && <DraftResults />}
+        {activeTab === 'draft' && (
+          <ErrorBoundary resetKey={`${activeTab}-${refreshKey}`}>
+            <Draft />
+          </ErrorBoundary>
+        )}
       </div>
 
       {/* Bottom Navigation */}
@@ -96,6 +102,8 @@ export default function App() {
           </button>
         </div>
       </nav>
+
+      <Toaster position="top-center" richColors />
     </div>
   );
 }

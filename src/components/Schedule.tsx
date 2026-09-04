@@ -147,7 +147,9 @@ export function Schedule({ refreshKey }: ScheduleProps) {
         
         return (
           <div key={day}>
-            <h3 className="text-sm font-medium text-gray-600 mb-2 px-1">{day}</h3>
+            <h3 className="text-sm font-medium text-gray-600 mb-2 px-1">
+              {day}{games[0]?.dateLabel ? `, ${games[0].dateLabel}` : ''}
+            </h3>
             <div className="space-y-2">
               {games.map(game => {
                 const awayTeam = getTeamById(game.awayTeamId);
@@ -172,7 +174,10 @@ export function Schedule({ refreshKey }: ScheduleProps) {
                     <div className="text-xs text-gray-500 mb-3">{game.time}</div>
                     
                     {/* Away Team */}
-                    <div className="flex items-center gap-3 mb-2">
+                    <div
+                      className="flex items-center gap-3 mb-2"
+                      style={{ borderLeft: `3px solid ${awayTeam.primaryColor}`, paddingLeft: 8 }}
+                    >
                       <TeamLogo teamId={game.awayTeamId} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className={`flex items-center gap-3 text-sm font-medium ${awayIsWinner ? 'text-fuchsia-700' : 'text-gray-900'}`}>
@@ -199,7 +204,10 @@ export function Schedule({ refreshKey }: ScheduleProps) {
                     </div>
                     
                     {/* Home Team */}
-                    <div className="flex items-center gap-3">
+                    <div
+                      className="flex items-center gap-3"
+                      style={{ borderLeft: `3px solid ${homeTeam.primaryColor}`, paddingLeft: 8 }}
+                    >
                       <TeamLogo teamId={game.homeTeamId} size="sm" />
                       <div className="flex-1 min-w-0">
                         <div className={`flex items-center gap-3 text-sm font-medium ${homeIsWinner ? 'text-fuchsia-700' : 'text-gray-900'}`}>

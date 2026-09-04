@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { getAllPlayers } from './gameData';
 import { getTeamByName } from '../data/teams';
 import type { Team } from '../data/teams';
-import schedule2025 from '../data/schedule-2025.json';
+import schedule2026 from '../data/schedule-2026.json';
 
 export interface Game {
   id: string;
@@ -10,6 +10,7 @@ export interface Game {
   awayTeamId: Team['id'];
   time: string;
   day: string;
+  dateLabel?: string;
   pointsAtStake: number;
   completed?: boolean;
   winnerTeamId?: Team['id'];
@@ -91,7 +92,7 @@ const POSTSEASON_MAP = {
   SB: { week: 4, label: 'Super Bowl', points: 5, round: 'superBowl' },
 };
 
-const LOCAL_SCHEDULE: RawScheduleGame[] = schedule2025 as RawScheduleGame[];
+const LOCAL_SCHEDULE: RawScheduleGame[] = schedule2026 as RawScheduleGame[];
 
 function buildDateString(game: RawScheduleGame) {
   const time = game.gametime?.length === 5 ? `${game.gametime}:00` : game.gametime;
@@ -294,13 +295,21 @@ export interface GameWithOwners extends Game {
 
 function formatDayTime(dateString: string) {
   const date = new Date(dateString);
-  const day = date.toLocaleDateString('en-US', { weekday: 'long' });
-  const time = date.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
+  const TZ = 'America/Chicago';
+  const day = date.toLocaleDateString('en-US', { weekday: 'long', timeZone: TZ });
+  const time =
+    date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      timeZone: TZ,
+    }) + ' CT';
+  const dateLabel = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    timeZone: TZ,
   });
 
-  return { day, time };
+  return { day, time, dateLabel };
 }
 
 function toScheduleGame(apiGame: ApiGame): Game | null {
@@ -309,7 +318,7 @@ function toScheduleGame(apiGame: ApiGame): Game | null {
   if (!homeTeam || !awayTeam) return null;
   const winner = apiGame.winnerName ? getTeamByName(apiGame.winnerName) : undefined;
 
-  const { day, time } = formatDayTime(apiGame.date);
+  const { day, time, dateLabel } = formatDayTime(apiGame.date);
 
   return {
     id: apiGame.id,
@@ -317,6 +326,7 @@ function toScheduleGame(apiGame: ApiGame): Game | null {
     awayTeamId: awayTeam.id,
     day,
     time,
+    dateLabel,
     pointsAtStake: apiGame.pointsAtStake ?? 1,
     completed: Boolean(apiGame.completed),
     winnerTeamId: winner?.id,
