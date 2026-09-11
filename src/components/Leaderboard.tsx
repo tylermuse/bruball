@@ -61,14 +61,28 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
   };
 
   useEffect(() => {
+    // Wait for playoffs to actually load before trusting any cached freeze —
+    // reading it while playoffs is still null (updatedAt undefined) would
+    // bypass readLeaderboardCache's updatedAt check entirely and resurrect
+    // an old freeze with no way to tell it's stale.
+    if (playoffs === null) return;
+
+    if (!hasSuperBowlWinner) {
+      // No real champion for the current data — never show a frozen total,
+      // and clear out any freeze a previous (possibly buggy) computation left.
+      window.localStorage.removeItem('bruball:leaderboardTotals');
+      setFrozenTotals((current) => (current ? null : current));
+      return;
+    }
+
     const stored = window.localStorage.getItem('bruball:leaderboardTotals');
-    const totals = readLeaderboardCache(stored, playoffs?.updatedAt ?? null);
+    const totals = readLeaderboardCache(stored, playoffs.updatedAt ?? null);
     if (totals) {
       setFrozenTotals(totals);
     } else if (stored) {
       window.localStorage.removeItem('bruball:leaderboardTotals');
     }
-  }, [playoffs?.updatedAt]);
+  }, [playoffs, hasSuperBowlWinner]);
 
   useEffect(() => {
     if (!hasSuperBowlWinner) return;
