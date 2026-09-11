@@ -27,14 +27,18 @@ function mapEspnEventToGame(event, pointsAtStake) {
   const id = event?.id || competition?.id;
   const completed = Boolean(competition?.status?.type?.completed);
 
-  const winner =
-    competitors.find((team) => team?.winner === true) ??
-    competitors.reduce((best, team) => {
-      if (!best) return team;
-      const bestScore = Number(best?.score ?? 0);
-      const teamScore = Number(team?.score ?? 0);
-      return teamScore > bestScore ? team : best;
-    }, null);
+  // Only resolve a winner for a finished game — the score-based fallback
+  // below would otherwise call a 0-0 scheduled game for whichever
+  // competitor happens to come first in the array.
+  const winner = completed
+    ? (competitors.find((team) => team?.winner === true) ??
+      competitors.reduce((best, team) => {
+        if (!best) return team;
+        const bestScore = Number(best?.score ?? 0);
+        const teamScore = Number(team?.score ?? 0);
+        return teamScore > bestScore ? team : best;
+      }, null))
+    : null;
 
   const winnerName =
     winner?.team?.displayName || winner?.team?.name || winner?.team?.shortDisplayName || null;

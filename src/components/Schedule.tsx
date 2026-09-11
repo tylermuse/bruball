@@ -59,8 +59,15 @@ export function Schedule({ refreshKey }: ScheduleProps) {
   }, [currentWeek, currentSeasonType, options.all, selectedIndex]);
 
   const activeIndex = selectedIndex ?? 0;
-  const windowStart = Math.max(0, activeIndex - 2);
-  const visibleOptions = options.all.slice(windowStart, activeIndex + 1);
+  // Center the active week in a small window instead of stopping the
+  // window at it, so later weeks/postseason rounds are reachable as pills
+  // rather than only one "Next week" click at a time.
+  const PILL_WINDOW_SIZE = 5;
+  const windowStart = Math.max(
+    0,
+    Math.min(activeIndex - 2, options.all.length - PILL_WINDOW_SIZE),
+  );
+  const visibleOptions = options.all.slice(windowStart, windowStart + PILL_WINDOW_SIZE);
 
   const cycle = (direction: 'prev' | 'next') => {
     const maxIndex = options.all.length - 1;
