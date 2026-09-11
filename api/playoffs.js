@@ -91,7 +91,11 @@ module.exports = async (req, res) => {
     const sportsData = await fetchSportsDataPlayoffs(season, forceRefresh);
 
     if (sportsData) {
-      const overridden = applyManualPlayoffOverrides(sportsData.playoffWins, sportsData.wildcardByes);
+      const overridden = applyManualPlayoffOverrides(
+        sportsData.playoffWins,
+        sportsData.wildcardByes,
+        Number(season),
+      );
       res.json({
         season: Number(season),
         updatedAt: new Date().toISOString(),
@@ -137,7 +141,7 @@ module.exports = async (req, res) => {
       }
     });
 
-    const overridden = applyManualPlayoffOverrides(playoffWins, wildcardByes);
+    const overridden = applyManualPlayoffOverrides(playoffWins, wildcardByes, Number(season));
     res.json({
       season: Number(season),
       updatedAt: new Date().toISOString(),

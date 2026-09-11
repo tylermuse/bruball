@@ -10,7 +10,7 @@ module.exports = async (req, res) => {
       return;
     }
 
-    const teams = applyManualTies(extractStandings(data));
+    const teams = applyManualTies(extractStandings(data), Number(season));
     res.json({
       season: Number(season),
       updatedAt: new Date().toISOString(),

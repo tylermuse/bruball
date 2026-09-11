@@ -1,10 +1,16 @@
+// These hardcode the actual results of the 2025 season's postseason (played
+// Jan-Feb 2026), added because ESPN/SportsData didn't reliably surface them
+// at the time. Gate every use on `season === MANUAL_OVERRIDE_SEASON` so a
+// new season doesn't inherit 2025's postseason as if it happened again.
+const MANUAL_OVERRIDE_SEASON = 2025;
 const MANUAL_CONFERENCE_WINNERS = ["New England Patriots", "Seattle Seahawks"];
 const MANUAL_SUPER_BOWL_WINNER = "Seattle Seahawks";
 const MANUAL_WILDCARD_WINNERS = ["Chicago Bears"];
 const MANUAL_TIE_TEAMS = ["Dallas Cowboys", "Green Bay Packers"];
 
-export function applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel) {
+export function applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel, season) {
   const isConferenceRound =
+    season === MANUAL_OVERRIDE_SEASON &&
     seasonType === 3 &&
     (weekNumber === 3 ||
       String(weekLabel || "").toLowerCase().includes("conference"));
@@ -20,8 +26,9 @@ export function applyManualConferenceWinners(games, seasonType, weekNumber, week
   });
 }
 
-export function applyManualSuperBowlWinner(games, seasonType, weekNumber, weekLabel) {
+export function applyManualSuperBowlWinner(games, seasonType, weekNumber, weekLabel, season) {
   const isSuperBowl =
+    season === MANUAL_OVERRIDE_SEASON &&
     seasonType === 3 &&
     (weekNumber === 4 || String(weekLabel || "").toLowerCase().includes("super bowl"));
   if (!isSuperBowl) return games;
@@ -38,7 +45,11 @@ export function applyManualSuperBowlWinner(games, seasonType, weekNumber, weekLa
   });
 }
 
-export function applyManualPlayoffOverrides(playoffWins, wildcardByes) {
+export function applyManualPlayoffOverrides(playoffWins, wildcardByes, season) {
+  if (season !== MANUAL_OVERRIDE_SEASON) {
+    return { playoffWins: playoffWins ?? {}, wildcardByes: wildcardByes ?? {} };
+  }
+
   const nextWins = { ...(playoffWins ?? {}) };
   const nextByes = { ...(wildcardByes ?? {}) };
 
@@ -91,7 +102,9 @@ export const manualOverrides = {
   superBowlWinner: MANUAL_SUPER_BOWL_WINNER,
 };
 
-export function getManualPostseasonSchedule(week) {
+export function getManualPostseasonSchedule(week, season) {
+  if (season !== MANUAL_OVERRIDE_SEASON) return null;
+
   if (week === 3) {
     return [
       {
@@ -132,7 +145,9 @@ export function getManualPostseasonSchedule(week) {
   return null;
 }
 
-export function applyManualTies(teams) {
+export function applyManualTies(teams, season) {
+  if (season !== MANUAL_OVERRIDE_SEASON) return teams;
+
   const nextTeams = { ...teams };
   MANUAL_TIE_TEAMS.forEach((teamName) => {
     if (nextTeams[teamName]) {

@@ -366,42 +366,30 @@ export function useWeeklySchedule(
   useEffect(() => {
     let active = true;
 
+    const applyLocal = (local: ReturnType<typeof getLocalSchedule>) => {
+      if (!local || local.games.length === 0 || !active) return false;
+      const nextGames = local.games
+        .map(toScheduleGame)
+        .filter((game): game is Game => Boolean(game));
+      setWeekLabel(local.weekLabel);
+      setCurrentWeek(local.week);
+      setCurrentSeasonType(local.seasonType ?? null);
+      setGames(nextGames);
+      return true;
+    };
+
     const load = async () => {
+      // Wild Card/Divisional weeks have no live-data advantage over the
+      // local file — both reflect the same already-decided results — so
+      // skip the round-trip there. Conference/Super Bowl weeks (and every
+      // other phase, including "current") always hit live data first below,
+      // so real results show up as soon as ESPN has them; local schedule is
+      // only a fallback when that request fails or comes back empty.
+      if (phase === 'postseason' && week && week !== 3 && week !== 4) {
+        if (applyLocal(getLocalSchedule(phase, week))) return;
+      }
+
       try {
-        if (phase === 'current') {
-          const local = getLocalCurrentSchedule();
-          if (local && local.games.length > 0) {
-            if (!active) return;
-            const nextGames = local.games
-              .map(toScheduleGame)
-              .filter((game): game is Game => Boolean(game));
-            setWeekLabel(local.weekLabel);
-            setCurrentWeek(local.week);
-            setCurrentSeasonType(local.seasonType ?? null);
-            setGames(nextGames);
-            return;
-          }
-        }
-
-        if (phase !== 'current' && week) {
-          // For Conference round and Super Bowl, always fetch from API to get manual overrides
-          const shouldUseApi = phase === 'postseason' && (week === 3 || week === 4);
-          if (!shouldUseApi) {
-            const local = getLocalSchedule(phase, week);
-            if (local && local.games.length > 0) {
-              if (!active) return;
-              const nextGames = local.games
-                .map(toScheduleGame)
-                .filter((game): game is Game => Boolean(game));
-              setWeekLabel(local.weekLabel);
-              setCurrentWeek(local.week);
-              setCurrentSeasonType(local.seasonType);
-              setGames(nextGames);
-              return;
-            }
-          }
-        }
-
         const params = new URLSearchParams();
         if (phase && phase !== 'current') {
           params.set('phase', phase);
@@ -414,23 +402,28 @@ export function useWeeklySchedule(
         }
         const url = params.toString() ? `/api/schedule?${params.toString()}` : '/api/schedule';
         const response = await fetch(url, { cache: 'no-store' });
-        if (!response.ok) return;
+        if (!response.ok) {
+          throw new Error(`Schedule request failed (${response.status})`);
+        }
         const data = (await response.json()) as ScheduleResponse;
         if (!active) return;
+
+        if (!Array.isArray(data.games) || data.games.length === 0) {
+          throw new Error('Empty schedule response');
+        }
 
         const mappedGames = data.games
           .map(toScheduleGame)
           .filter((game): game is Game => Boolean(game));
 
-        let nextGames = mappedGames;
-        let nextWeekLabel =
-          data.weekLabel ?? (data.week ? `Week ${data.week}` : 'This Week');
-        setWeekLabel(nextWeekLabel);
+        setWeekLabel(data.weekLabel ?? (data.week ? `Week ${data.week}` : 'This Week'));
         setCurrentWeek(data.week ?? null);
         setCurrentSeasonType(data.seasonType ?? null);
         setGames(mappedGames);
       } catch {
-        // Keep fallback schedule on error.
+        if (!active) return;
+        const local = phase === 'current' ? getLocalCurrentSchedule() : getLocalSchedule(phase, week);
+        applyLocal(local);
       }
     };
 

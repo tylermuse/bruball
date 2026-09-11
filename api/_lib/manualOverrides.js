@@ -1,3 +1,10 @@
+// These hardcode the actual results of the 2025 season's postseason (played
+// Jan-Feb 2026), added because ESPN/SportsData didn't reliably surface them
+// at the time. They must never fire for any other season — gate every use
+// on `season === MANUAL_OVERRIDE_SEASON` so a new season (2026 and on)
+// starts with a clean, live-data-only slate instead of inheriting 2025's
+// postseason as if it already happened again.
+const MANUAL_OVERRIDE_SEASON = 2025;
 const MANUAL_CONFERENCE_WINNERS = ['New England Patriots', 'Seattle Seahawks'];
 const MANUAL_SUPER_BOWL_WINNER = 'Seattle Seahawks';
 const MANUAL_WILDCARD_WINNERS = [
@@ -14,8 +21,9 @@ const MANUAL_DIVISIONAL_WINNERS = [
 ];
 const MANUAL_TIE_TEAMS = ['Dallas Cowboys', 'Green Bay Packers'];
 
-function applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel) {
+function applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel, season) {
   const isConferenceRound =
+    season === MANUAL_OVERRIDE_SEASON &&
     seasonType === 3 &&
     (weekNumber === 3 ||
       String(weekLabel || '').toLowerCase().includes('conference'));
@@ -31,8 +39,9 @@ function applyManualConferenceWinners(games, seasonType, weekNumber, weekLabel) 
   });
 }
 
-function applyManualSuperBowlWinner(games, seasonType, weekNumber, weekLabel) {
+function applyManualSuperBowlWinner(games, seasonType, weekNumber, weekLabel, season) {
   const isSuperBowl =
+    season === MANUAL_OVERRIDE_SEASON &&
     seasonType === 3 &&
     (weekNumber === 4 || String(weekLabel || '').toLowerCase().includes('super bowl'));
   if (!isSuperBowl) return games;
@@ -49,7 +58,11 @@ function applyManualSuperBowlWinner(games, seasonType, weekNumber, weekLabel) {
   });
 }
 
-function applyManualPlayoffOverrides(playoffWins, wildcardByes) {
+function applyManualPlayoffOverrides(playoffWins, wildcardByes, season) {
+  if (season !== MANUAL_OVERRIDE_SEASON) {
+    return { playoffWins: playoffWins ?? {}, wildcardByes: wildcardByes ?? {} };
+  }
+
   const nextWins = { ...(playoffWins ?? {}) };
   const nextByes = { ...(wildcardByes ?? {}) };
 
@@ -114,7 +127,9 @@ function applyManualPlayoffOverrides(playoffWins, wildcardByes) {
   return { playoffWins: nextWins, wildcardByes: nextByes };
 }
 
-function getManualPostseasonSchedule(week) {
+function getManualPostseasonSchedule(week, season) {
+  if (season !== MANUAL_OVERRIDE_SEASON) return null;
+
   if (week === 3) {
     return [
       {
@@ -155,7 +170,9 @@ function getManualPostseasonSchedule(week) {
   return null;
 }
 
-function applyManualTies(teams) {
+function applyManualTies(teams, season) {
+  if (season !== MANUAL_OVERRIDE_SEASON) return teams;
+
   const nextTeams = { ...teams };
   MANUAL_TIE_TEAMS.forEach((teamName) => {
     if (nextTeams[teamName]) {

@@ -7,57 +7,78 @@ function getDefaultSeason() {
 function getStatValue(stats, statName) {
   if (!Array.isArray(stats)) return 0;
   const stat = stats.find((item) => item && item.name === statName);
-  return typeof stat?.value === 'number' ? stat.value : 0;
+  const raw = stat?.value;
+  const value = typeof raw === 'string' ? Number(raw) : raw;
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
+/**
+ * ESPN serves two incompatible standings shapes depending on which host
+ * answers (see fetchEspnStandings): site.api.espn.com nests conferences under
+ * top-level `children`, while the cdn.espn.com fallback nests them under
+ * `content.standings.groups`. Both are conference -> division -> entries
+ * trees once unwrapped, just with different key names at each level.
+ */
 function extractStandings(data) {
   const teams = {};
-  const conferences = Array.isArray(data?.children) ? data.children : [];
 
-  conferences.forEach((conference) => {
-    const divisions = Array.isArray(conference?.children)
-      ? conference.children
-      : [];
+  const addEntry = (entry, divisionName, conferenceName) => {
+    const team = entry?.team;
+    const displayName = team?.displayName || team?.name;
+    if (!displayName) return;
 
-    const conferenceEntries = Array.isArray(conference?.standings?.entries)
-      ? conference.standings.entries
-      : [];
+    const wins = getStatValue(entry?.stats, 'wins');
+    const losses = getStatValue(entry?.stats, 'losses');
+    const ties = getStatValue(entry?.stats, 'ties');
+    const seed = getStatValue(entry?.stats, 'seed');
 
-    const addEntry = (entry, divisionName) => {
-      const team = entry?.team;
-      const displayName = team?.displayName || team?.name;
-      if (!displayName) return;
-
-      const wins = getStatValue(entry?.stats, 'wins');
-      const losses = getStatValue(entry?.stats, 'losses');
-      const ties = getStatValue(entry?.stats, 'ties');
-      const seed = getStatValue(entry?.stats, 'seed');
-
-      teams[displayName] = {
-        name: displayName,
-        abbreviation: team?.abbreviation,
-        wins,
-        losses,
-        ties,
-        seed,
-        division: divisionName ?? null,
-        conference: conference?.name ?? null,
-      };
+    teams[displayName] = {
+      name: displayName,
+      abbreviation: team?.abbreviation,
+      wins,
+      losses,
+      ties,
+      seed,
+      division: divisionName ?? null,
+      conference: conferenceName ?? null,
     };
+  };
 
-    if (conferenceEntries.length > 0) {
-      conferenceEntries.forEach((entry) => addEntry(entry, null));
-      return;
-    }
-
-    divisions.forEach((division) => {
-      const entries = Array.isArray(division?.standings?.entries)
-        ? division.standings.entries
+  const walkConferences = (conferences, getDivisions) => {
+    conferences.forEach((conference) => {
+      const divisions = getDivisions(conference);
+      const conferenceEntries = Array.isArray(conference?.standings?.entries)
+        ? conference.standings.entries
         : [];
 
-      entries.forEach((entry) => addEntry(entry, division?.name ?? null));
+      if (conferenceEntries.length > 0) {
+        conferenceEntries.forEach((entry) => addEntry(entry, null, conference?.name ?? null));
+        return;
+      }
+
+      divisions.forEach((division) => {
+        const entries = Array.isArray(division?.standings?.entries)
+          ? division.standings.entries
+          : [];
+        entries.forEach((entry) => addEntry(entry, division?.name ?? null, conference?.name ?? null));
+      });
     });
-  });
+  };
+
+  const siteApiConferences = Array.isArray(data?.children) ? data.children : [];
+  if (siteApiConferences.length > 0) {
+    walkConferences(siteApiConferences, (conference) =>
+      Array.isArray(conference?.children) ? conference.children : [],
+    );
+    return teams;
+  }
+
+  const cdnConferences = Array.isArray(data?.content?.standings?.groups)
+    ? data.content.standings.groups
+    : [];
+  walkConferences(cdnConferences, (conference) =>
+    Array.isArray(conference?.groups) ? conference.groups : [],
+  );
 
   return teams;
 }

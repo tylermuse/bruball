@@ -85,30 +85,38 @@ describe('getTeamPlayoffPoints', () => {
 });
 
 describe('applyManualPlayoffOverrides', () => {
-  it('adds conference and Super Bowl wins for manual winners', () => {
-    const playoffs = {
-      season: null,
-      updatedAt: '2026-02-10T00:00:00.000Z',
-      playoffWins: {
-        'New England Patriots': {
-          wildCard: 0,
-          divisional: 1,
-          conference: 0,
-          superBowl: 0,
-        },
-        'Seattle Seahawks': {
-          wildCard: 0,
-          divisional: 1,
-          conference: 0,
-          superBowl: 0,
-        },
+  const basePlayoffs = {
+    updatedAt: '2026-02-10T00:00:00.000Z',
+    playoffWins: {
+      'New England Patriots': {
+        wildCard: 0,
+        divisional: 1,
+        conference: 0,
+        superBowl: 0,
       },
-      wildcardByes: {},
-    };
+      'Seattle Seahawks': {
+        wildCard: 0,
+        divisional: 1,
+        conference: 0,
+        superBowl: 0,
+      },
+    },
+    wildcardByes: {},
+  };
 
-    const updated = applyManualPlayoffOverrides(playoffs);
+  it('adds conference and Super Bowl wins for manual winners in the 2025 season', () => {
+    const updated = applyManualPlayoffOverrides({ ...basePlayoffs, season: 2025 });
     expect(updated?.playoffWins['New England Patriots'].conference).toBe(1);
     expect(updated?.playoffWins['Seattle Seahawks'].conference).toBe(1);
     expect(updated?.playoffWins['Seattle Seahawks'].superBowl).toBe(1);
+  });
+
+  it('leaves other seasons untouched so a new season starts with a clean slate', () => {
+    const updated = applyManualPlayoffOverrides({ ...basePlayoffs, season: 2026 });
+    expect(updated?.playoffWins['New England Patriots'].conference).toBe(0);
+    expect(updated?.playoffWins['Seattle Seahawks'].superBowl).toBe(0);
+
+    const updatedNullSeason = applyManualPlayoffOverrides({ ...basePlayoffs, season: null });
+    expect(updatedNullSeason?.playoffWins['Seattle Seahawks'].superBowl).toBe(0);
   });
 });

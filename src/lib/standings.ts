@@ -321,6 +321,11 @@ const PLAYOFF_POINTS = {
   wildCardBye: 1.5,
 };
 
+// Hardcodes the actual result of the 2025 season's postseason (played
+// Jan-Feb 2026) as a backstop for when live data was incomplete. Gated to
+// that one season so it doesn't get re-applied as fact once a new season
+// (2026 and on) starts — see the matching guard in api/_lib/manualOverrides.js.
+const MANUAL_OVERRIDE_SEASON = 2025;
 const MANUAL_CONFERENCE_WINNERS = ['New England Patriots', 'Seattle Seahawks'];
 const MANUAL_SUPER_BOWL_WINNER = 'Seattle Seahawks';
 
@@ -328,6 +333,7 @@ export function applyManualPlayoffOverrides(
   playoffs: PlayoffResponse | null,
 ): PlayoffResponse | null {
   if (!playoffs) return playoffs;
+  if (playoffs.season !== MANUAL_OVERRIDE_SEASON) return playoffs;
   const next = { ...playoffs, playoffWins: { ...(playoffs.playoffWins ?? {}) } };
 
   MANUAL_CONFERENCE_WINNERS.forEach((teamName) => {
