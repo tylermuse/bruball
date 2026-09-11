@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Undo2, RotateCcw, Shuffle, CheckCircle2, ChevronUp, ChevronDown, Bot, User, Lock, FlaskConical, X } from 'lucide-react';
+import { Undo2, RotateCcw, Shuffle, CheckCircle2, ChevronUp, ChevronDown, Bot, User, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { TEAMS, getTeamById } from '../data/teams';
 import { TeamLogo } from '../lib/teamLogos';
@@ -30,7 +30,6 @@ import {
   DIVISIONS,
   ROUNDS,
   LIVE_KEY,
-  SIM_KEY,
   type DraftState,
   type PickTag,
 } from '../lib/draftStore';
@@ -55,44 +54,14 @@ function pct(v: number) {
   return `${(v * 100).toFixed(1)}%`;
 }
 
-// Live draft night: Thursday, September 10, 2026 (midnight America/Chicago).
-// Until then, the app only allows simulation — this is what flips it on.
-const LIVE_DRAFT_UNLOCKS_AT = new Date('2026-09-10T05:00:00.000Z');
-const LIVE_DRAFT_UNLOCK_LABEL = 'Thursday, September 10';
-
-function useNow(intervalMs = 60000) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), intervalMs);
-    return () => window.clearInterval(id);
-  }, [intervalMs]);
-  return now;
-}
-
 export function Draft() {
-  const now = useNow();
-  const liveDraftLocked = now < LIVE_DRAFT_UNLOCKS_AT.getTime();
-
-  // Simulation mode is a fully separate storage key (SIM_KEY vs LIVE_KEY) —
-  // running a test draft here can never touch the real draft, and
-  // rostersAsPlayers() (leaderboard/schedule) only ever reads LIVE_KEY. Before
-  // draft night the app is locked into simulation regardless of this toggle.
-  const [simulate, setSimulate] = useState(false);
-  const effectiveSimulate = liveDraftLocked || simulate;
-  const storageKey = effectiveSimulate ? SIM_KEY : LIVE_KEY;
-  const [state, setState] = useState<DraftState>(() => loadDraft(storageKey));
+  const [state, setState] = useState<DraftState>(() => loadDraft(LIVE_KEY));
   const [selectedDivision, setSelectedDivision] = useState<string | null>(null);
   const board = VALUATION_BOARD_2026;
 
-  useEffect(() => {
-    setState(loadDraft(storageKey));
-    setSelectedDivision(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey]);
-
   const apply = (next: DraftState) => {
     setState(next);
-    saveDraft(next, storageKey);
+    saveDraft(next, LIVE_KEY);
   };
 
   const move = (index: number, dir: -1 | 1) => {
@@ -235,38 +204,7 @@ export function Draft() {
         border: 1px solid #d5dae0; background: #fff; cursor: pointer; }
       .dr-tau-btn.active { background: #ea580c; color: #fff; border-color: #ea580c; }
       .dr-homer-note { font-size: 11px; color: #92400e; }
-      .dr-sim-banner { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 12px;
-        background: #ecfeff; border: 1px solid #a5f3fc; color: #0e7490; font-size: 12px; font-weight: 600; }
-      .dr-sim-banner button { margin-left: auto; display: inline-flex; align-items: center; gap: 4px;
-        font-size: 11px; font-weight: 700; border: 0; background: none; color: #0e7490; cursor: pointer;
-        padding: 4px 6px; border-radius: 6px; }
-      .dr-sim-banner button:hover { background: rgba(14,116,144,.1); }
-      .dr-sim-entry { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600;
-        color: #0e7490; background: none; border: 0; cursor: pointer; padding: 4px 0; }
     `}</style>
-  );
-
-  const simBanner = liveDraftLocked ? (
-    <div className="dr-sim-banner">
-      <Lock className="size-4" />
-      <span>Simulation only — the live draft unlocks {LIVE_DRAFT_UNLOCK_LABEL}.</span>
-    </div>
-  ) : simulate ? (
-    <div className="dr-sim-banner">
-      <FlaskConical className="size-4" />
-      <span>Simulation — this test draft is isolated from your real 2026 draft.</span>
-      <button
-        onClick={() => {
-          setSimulate(false);
-        }}
-      >
-        <X className="size-3" /> Exit simulation
-      </button>
-    </div>
-  ) : (
-    <button className="dr-sim-entry" onClick={() => setSimulate(true)}>
-      <FlaskConical className="size-3" /> Try a simulated draft (won't touch your real draft)
-    </button>
   );
 
   // ---------------- SETUP ----------------
@@ -274,7 +212,6 @@ export function Draft() {
     return (
       <div className="dr-root">
         {styles}
-        {simBanner}
         <div className="dr-card">
           <div className="dr-eyebrow">2026 Season</div>
           <div className="dr-title" style={{ marginTop: 4 }}>Run the draft</div>
@@ -382,7 +319,6 @@ export function Draft() {
     return (
       <div className="dr-root">
         {styles}
-        {simBanner}
         <div className="dr-card" style={{ borderColor: '#bbf7d0', background: '#f0fdf4' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <CheckCircle2 className="size-6" style={{ color: '#16a34a' }} />
@@ -466,7 +402,6 @@ export function Draft() {
   return (
     <div className="dr-root">
       {styles}
-      {simBanner}
 
       {/* On the clock */}
       <div className="dr-clock">

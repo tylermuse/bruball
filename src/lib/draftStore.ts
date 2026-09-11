@@ -62,14 +62,48 @@ export const DIVISIONS = [
   'NFC East', 'NFC North', 'NFC South', 'NFC West',
 ] as const;
 
+/** The completed 2026 draft — ships as the default LIVE_KEY state so every
+ * visitor sees the real result with no local draft history required. */
+const FINAL_PICKS_2026: DraftPickRecord[] = [
+  { pickNumber: 1, playerId: 'tyler', teamId: 'buffalo-bills', division: 'AFC East' },
+  { pickNumber: 2, playerId: 'austin', teamId: 'new-york-jets', division: 'AFC East' },
+  { pickNumber: 3, playerId: 'lindy', teamId: 'new-england-patriots', division: 'AFC East' },
+  { pickNumber: 4, playerId: 'nick', teamId: 'miami-dolphins', division: 'AFC East' },
+  { pickNumber: 5, playerId: 'nick', teamId: 'baltimore-ravens', division: 'AFC North' },
+  { pickNumber: 6, playerId: 'lindy', teamId: 'cincinnati-bengals', division: 'AFC North' },
+  { pickNumber: 7, playerId: 'austin', teamId: 'pittsburgh-steelers', division: 'AFC North' },
+  { pickNumber: 8, playerId: 'tyler', teamId: 'cleveland-browns', division: 'AFC North' },
+  { pickNumber: 9, playerId: 'tyler', teamId: 'tennessee-titans', division: 'AFC South' },
+  { pickNumber: 10, playerId: 'austin', teamId: 'indianapolis-colts', division: 'AFC South' },
+  { pickNumber: 11, playerId: 'lindy', teamId: 'jacksonville-jaguars', division: 'AFC South' },
+  { pickNumber: 12, playerId: 'nick', teamId: 'houston-texans', division: 'AFC South' },
+  { pickNumber: 13, playerId: 'nick', teamId: 'las-vegas-raiders', division: 'AFC West' },
+  { pickNumber: 14, playerId: 'lindy', teamId: 'kansas-city-chiefs', division: 'AFC West' },
+  { pickNumber: 15, playerId: 'austin', teamId: 'denver-broncos', division: 'AFC West' },
+  { pickNumber: 16, playerId: 'tyler', teamId: 'los-angeles-chargers', division: 'AFC West' },
+  { pickNumber: 17, playerId: 'tyler', teamId: 'philadelphia-eagles', division: 'NFC East' },
+  { pickNumber: 18, playerId: 'austin', teamId: 'dallas-cowboys', division: 'NFC East' },
+  { pickNumber: 19, playerId: 'lindy', teamId: 'washington-commanders', division: 'NFC East' },
+  { pickNumber: 20, playerId: 'nick', teamId: 'new-york-giants', division: 'NFC East' },
+  { pickNumber: 21, playerId: 'nick', teamId: 'minnesota-vikings', division: 'NFC North' },
+  { pickNumber: 22, playerId: 'lindy', teamId: 'chicago-bears', division: 'NFC North' },
+  { pickNumber: 23, playerId: 'austin', teamId: 'detroit-lions', division: 'NFC North' },
+  { pickNumber: 24, playerId: 'tyler', teamId: 'green-bay-packers', division: 'NFC North' },
+  { pickNumber: 25, playerId: 'tyler', teamId: 'carolina-panthers', division: 'NFC South' },
+  { pickNumber: 26, playerId: 'austin', teamId: 'new-orleans-saints', division: 'NFC South' },
+  { pickNumber: 27, playerId: 'lindy', teamId: 'atlanta-falcons', division: 'NFC South' },
+  { pickNumber: 28, playerId: 'nick', teamId: 'tampa-bay-buccaneers', division: 'NFC South' },
+  { pickNumber: 29, playerId: 'nick', teamId: 'arizona-cardinals', division: 'NFC West' },
+  { pickNumber: 30, playerId: 'lindy', teamId: 'los-angeles-rams', division: 'NFC West' },
+  { pickNumber: 31, playerId: 'austin', teamId: 'san-francisco-49ers', division: 'NFC West' },
+  { pickNumber: 32, playerId: 'tyler', teamId: 'seattle-seahawks', division: 'NFC West' },
+];
+
 // One team per division => rounds equal the number of divisions.
 export const ROUNDS = DIVISIONS.length; // 8
 
 /** The real draft — this is what the leaderboard/schedule read from. */
 export const LIVE_KEY = 'bruball:draft2026';
-/** A fully isolated sandbox for trying out the draft flow / CPU AI. Never
- * read by rostersAsPlayers(), so it can never leak into the live league. */
-export const SIM_KEY = 'bruball:draftSim2026';
 
 function freshState(members: Member[] = DEFAULT_MEMBERS): DraftState {
   return {
@@ -78,6 +112,16 @@ function freshState(members: Member[] = DEFAULT_MEMBERS): DraftState {
     order: members.map((m) => m.id),
     picks: [],
     startedAt: null,
+  };
+}
+
+function finalState(): DraftState {
+  return {
+    status: 'complete',
+    members: DEFAULT_MEMBERS,
+    order: DEFAULT_MEMBERS.map((m) => m.id),
+    picks: FINAL_PICKS_2026,
+    startedAt: '2026-09-10T05:00:00.000Z',
   };
 }
 
@@ -101,7 +145,7 @@ export function loadDraft(key: string = LIVE_KEY): DraftState {
   } catch {
     /* ignore corrupt state */
   }
-  return freshState();
+  return key === LIVE_KEY ? finalState() : freshState();
 }
 
 export function saveDraft(state: DraftState, key: string = LIVE_KEY): void {
