@@ -139,13 +139,17 @@ function normalize(raw: any): DraftState {
 }
 
 export function loadDraft(key: string = LIVE_KEY): DraftState {
+  // The live/authoritative view always reflects the final 2026 draft — never
+  // rehydrate from a viewer's localStorage, which can hold stale state from a
+  // prior sim session and misassign teams to owners.
+  if (key === LIVE_KEY) return finalState();
   try {
     const raw = typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
     if (raw) return normalize(JSON.parse(raw));
   } catch {
     /* ignore corrupt state */
   }
-  return key === LIVE_KEY ? finalState() : freshState();
+  return freshState();
 }
 
 export function saveDraft(state: DraftState, key: string = LIVE_KEY): void {
