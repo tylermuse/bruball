@@ -46,7 +46,7 @@ export const DEFAULT_MEMBERS: Member[] = [
   { id: 'tyler', name: 'Tyler' },
   { id: 'austin', name: 'Austin' },
   { id: 'lindy', name: 'Lindy' },
-  { id: 'nick', name: 'Nick' },
+  { id: 'nick', name: 'Nick aka "Problem Child"' },
 ];
 
 /** §4.3 — each bot's recurring quirk. Real preferences for this group; falls

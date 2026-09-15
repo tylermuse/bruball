@@ -175,12 +175,18 @@ export function Leaderboard({ refreshKey }: LeaderboardProps) {
               <div className="flex items-center gap-4 mb-3">
                 {/* Rank */}
                 <div className="flex items-center justify-center w-10 h-10 shrink-0">
-                  {(anyDrafted && getMedalIcon(rank)) || (
-                    <div
-                      className="text-xl text-gray-600"
-                    >
-                      {rank}
+                  {rank === 4 ? (
+                    <div className="text-xl" role="img" aria-label="4th place">
+                      💩
                     </div>
+                  ) : (
+                    (anyDrafted && getMedalIcon(rank)) || (
+                      <div
+                        className="text-xl text-gray-600"
+                      >
+                        {rank}
+                      </div>
+                    )
                   )}
                 </div>
 
