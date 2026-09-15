@@ -1,5 +1,44 @@
 const { getDefaultSeason } = require('./standings');
 
+// Fallback for teams the live Standings response doesn't (yet) include an
+// entry for — without this, mapSportsDataGame falls back to the bare
+// abbreviation (e.g. "KC"), which the frontend can't match to a team and
+// silently drops the whole game from the schedule.
+const STATIC_ABBR_TO_NAME = {
+  ARI: 'Arizona Cardinals',
+  ATL: 'Atlanta Falcons',
+  BAL: 'Baltimore Ravens',
+  BUF: 'Buffalo Bills',
+  CAR: 'Carolina Panthers',
+  CHI: 'Chicago Bears',
+  CIN: 'Cincinnati Bengals',
+  CLE: 'Cleveland Browns',
+  DAL: 'Dallas Cowboys',
+  DEN: 'Denver Broncos',
+  DET: 'Detroit Lions',
+  GB: 'Green Bay Packers',
+  HOU: 'Houston Texans',
+  IND: 'Indianapolis Colts',
+  JAX: 'Jacksonville Jaguars',
+  KC: 'Kansas City Chiefs',
+  LA: 'Los Angeles Rams',
+  LAC: 'Los Angeles Chargers',
+  LV: 'Las Vegas Raiders',
+  MIA: 'Miami Dolphins',
+  MIN: 'Minnesota Vikings',
+  NE: 'New England Patriots',
+  NO: 'New Orleans Saints',
+  NYG: 'New York Giants',
+  NYJ: 'New York Jets',
+  PHI: 'Philadelphia Eagles',
+  PIT: 'Pittsburgh Steelers',
+  SEA: 'Seattle Seahawks',
+  SF: 'San Francisco 49ers',
+  TB: 'Tampa Bay Buccaneers',
+  TEN: 'Tennessee Titans',
+  WAS: 'Washington Commanders',
+};
+
 function isSportsDataFinal(game) {
   const status = String(game?.Status || '').toLowerCase();
   if (game?.IsOver === true) return true;
@@ -188,8 +227,8 @@ async function fetchSportsDataScheduleByWeek(season, week, phase, apiKey, forceR
 function mapSportsDataGame(game, abbrToName, pointsAtStake) {
   const homeAbbr = game?.HomeTeam;
   const awayAbbr = game?.AwayTeam;
-  const homeName = abbrToName[homeAbbr] || homeAbbr;
-  const awayName = abbrToName[awayAbbr] || awayAbbr;
+  const homeName = abbrToName[homeAbbr] || STATIC_ABBR_TO_NAME[homeAbbr] || homeAbbr;
+  const awayName = abbrToName[awayAbbr] || STATIC_ABBR_TO_NAME[awayAbbr] || awayAbbr;
   const date = game?.Date;
   const id = game?.GameKey || game?.GameID;
 
@@ -200,7 +239,7 @@ function mapSportsDataGame(game, abbrToName, pointsAtStake) {
   if (completed) {
     const winnerAbbr = game?.Winner;
     if (winnerAbbr) {
-      winnerName = abbrToName[winnerAbbr] || winnerAbbr;
+      winnerName = abbrToName[winnerAbbr] || STATIC_ABBR_TO_NAME[winnerAbbr] || winnerAbbr;
     } else if (
       typeof game?.HomeScore === 'number' &&
       typeof game?.AwayScore === 'number'
